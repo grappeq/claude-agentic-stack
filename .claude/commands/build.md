@@ -5,7 +5,7 @@ argument-hint: [task description]
 
 Execute the task: **$ARGUMENTS**
 
-Run the full Agentic Dev Stack loop (see CLAUDE.md). **Do not skip the review gate.**
+Run the full Claude Agentic Stack loop (see CLAUDE.md). **Do not skip the review gate.**
 
 Execution model: you **edit on the host**, but **all builds/tests/installs run on the sandbox VM** over SSH (`/verify` syncs the tree and runs them there). Never run build/test on the limited host.
 

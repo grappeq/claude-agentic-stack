@@ -1,4 +1,4 @@
-# Agentic Dev Stack
+# Claude Agentic Stack
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -42,9 +42,9 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
 Clone the repo, then copy the two pieces into the root of your target repo:
 
 ```bash
-git clone https://github.com/grappeq/agentic-dev-stack.git
-cp -r agentic-dev-stack/.claude   /path/to/your-repo/.claude
-cp    agentic-dev-stack/CLAUDE.md /path/to/your-repo/CLAUDE.md
+git clone https://github.com/grappeq/claude-agentic-stack.git
+cp -r claude-agentic-stack/.claude   /path/to/your-repo/.claude
+cp    claude-agentic-stack/CLAUDE.md /path/to/your-repo/CLAUDE.md
 ```
 
 This assumes a fresh target; if your repo already has a `.claude/`, replace or merge it rather than nesting a second one inside.
@@ -95,6 +95,18 @@ The same machinery runs in two modes — pick by the work:
 ```
 
 The orchestrator is the main Claude thread; the agents are isolated-context leaf workers that **find** problems and assess progress. The orchestrator **fixes** and coordinates. (Subagents can't spawn subagents, which is why coordination lives in the main thread.)
+
+## Three loops
+
+The stack converges through three loops. Naming them is the fastest way to see how a one-line request becomes finished work:
+
+| | Loop | What it does | Where |
+|---|------|--------------|-------|
+| **L1** | **Convergence** (inner) | `resolve → re-verify → re-review` until verify is green and every reviewer reports `GATE: PASS`. A circuit-breaker caps repeated failed fixes so it can't thrash. | Automatic — both `/build` and `/prototype` |
+| **L2** | **Improvement** (outer) | Once a milestone is correct, `product-designer` gap-checks the running app against the frozen spec and the loop builds the next increment — milestone by milestone — until the vision is met, the round budget is spent (default 3), or the gap review signals scope beyond the vision (then it stops and asks). | `/prototype`, wrapping L1 |
+| **L3** | **You** (human) | Each run ends with a report and the assumptions it made. You read it and send the next prompt to redirect; edit `.agentic/spec.md` to steer the next run. | Between runs |
+
+The distinction that matters: **L1 makes work _correct_, L2 makes it _complete_, L3 is where _you_ point it.** `/build` is mostly L1; `/prototype` is L2 over L1, then back to you.
 
 ## Usage
 
