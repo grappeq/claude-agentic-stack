@@ -1,5 +1,6 @@
 ---
 description: Language-agnostic quality gate — sync the working tree to the sandbox VM, then run the project's build, lint/type-check, tests, and a runtime smoke there over SSH.
+argument-hint: [optional round number N for screenshot bucketing]
 ---
 
 The host is permission-limited, so **builds and tests run on the sandbox VM** (SSH alias `sandbox`), never on the host.
@@ -31,7 +32,7 @@ The host is permission-limited, so **builds and tests run on the sandbox VM** (S
 
    If no recognized manifest exists, say so and report that there is nothing to verify.
 
-4. **Runtime smoke — does it actually run?** Passing unit tests is not enough; a frontend can be green and still render a blank screen. For any **runnable** app, boot it on the VM and exercise it. Detect the target and run the matching check — for a non-trivial flow, dispatch the `e2e-tester` agent.
+4. **Runtime smoke — does it actually run?** Passing unit tests is not enough; a frontend can be green and still render a blank screen. For any **runnable** app, boot it on the VM and exercise it. Detect the target and run the matching check — for a non-trivial flow, dispatch the `e2e-tester` agent. When `/verify` is invoked with a round number **N** (its argument, from `/prototype`), pass that N to `e2e-tester` so screenshots land in `round-<N>/` rather than the standalone fallback.
 
    | Target | Smoke check (on the VM) |
    |--------|--------------------------|
@@ -39,6 +40,6 @@ The host is permission-limited, so **builds and tests run on the sandbox VM** (S
    | HTTP API / service | Start the service; probe health + the primary endpoint(s), happy and error paths; assert status and response shape. |
    | CLI / library | Run the built artifact end-to-end against real inputs; assert real output and exit code. |
 
-   Screenshots go to `.agentic/screenshots/` (pulled back to the host) so `ux-reviewer` and the orchestrator can view them; on first creating `.agentic/`, write a `.agentic/.gitignore` containing `*` so this evidence — which may contain secrets or PII — can never be committed. **Graceful degradation:** if no browser is on the VM, fall back to booting the server and fetching the served page over HTTP — assert a non-empty root and no error markers — and report that visual evidence was unavailable (`npx playwright install --with-deps chromium` on the VM enables full coverage). Skip this step only when there is genuinely nothing runnable (e.g. a pure library exercised entirely by its unit tests). A `SMOKE: FAIL` is a failing step — the overall verdict must then be `VERIFY: FAIL`.
+   Screenshots go to `.agentic/screenshots/` — bucketed per iteration round (`round-<N>/`) when run inside `/prototype` so rounds can be compared, or `standalone/` otherwise — and are pulled back to the host so `ux-reviewer` and the orchestrator can view them; on first creating `.agentic/`, write a `.agentic/.gitignore` containing `*` so this evidence — which may contain secrets or PII — can never be committed. **Graceful degradation:** if no browser is on the VM, fall back to booting the server and fetching the served page over HTTP — assert a non-empty root and no error markers — and report that visual evidence was unavailable (`npx playwright install --with-deps chromium` on the VM enables full coverage). Skip this step only when there is genuinely nothing runnable (e.g. a pure library exercised entirely by its unit tests). A `SMOKE: FAIL` is a failing step — the overall verdict must then be `VERIFY: FAIL`.
 
 5. Report each step's pass/fail. End with an overall verdict on its own line: `VERIFY: PASS`, or `VERIFY: FAIL` followed by the failing step(s) and the relevant output.

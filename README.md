@@ -20,7 +20,7 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
     ├── settings.bash-sandbox.json.example # mac/Linux/WSL2, no separate VM: built-in OS Bash sandbox
     ├── settings.vm-bypass.json.example    # when Claude Code runs INSIDE a disposable VM/container
     ├── agents/
-    │   ├── product-designer.md        # vision → spec + milestones; gap-checks build vs spec (read-only)
+    │   ├── product-designer.md        # kickoff Q&A + lean spec; gap-checks build vs spec (read-only)
     │   ├── planner.md                 # decomposes a task → plan + test strategy            (read-only)
     │   ├── test-engineer.md           # writes & runs meaningful unit tests
     │   ├── e2e-tester.md              # boots the app on the VM, smokes it, screenshots it
@@ -32,7 +32,7 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
         ├── prototype.md  →  /prototype # vision → app: iterate across milestones
         ├── verify.md     →  /verify    # build + lint + test + runtime smoke gate
         ├── review.md     →  /review    # reviewers in parallel → one report
-        └── ship.md       →  /ship      # gated conventional commit (user-only)
+        └── ship.md       →  /ship      # finalize: curate commit + push/PR (user-only)
 ```
 
 ## Install
@@ -53,7 +53,7 @@ The runtime smoke writes screenshots under `.agentic/` — add **`.agentic/`** t
 The same machinery runs in two modes — pick by the work:
 
 - **`/build <task>` — precision.** Changing an existing system: smallest viable change, reuse first, match conventions. A single pass with an inner convergence loop.
-- **`/prototype <vision>` — prototype.** Turning a broad vision into a working app: it makes the product and UX calls itself (recording assumptions) and **iterates across milestones** until the spec is met. Decide-and-build.
+- **`/prototype <vision>` — prototype.** Turning a broad vision into a working app: a **brief kickoff interview** pins down the need, then it runs **autonomously** — making the product and UX calls itself (recording assumptions) and **iterating across milestones** until the vision is met. Built for long, unattended runs.
 
 ### Precision loop — `/build`
 
@@ -66,7 +66,7 @@ The same machinery runs in two modes — pick by the work:
    │                   (test-engineer adds units · e2e-tester boots & drives the app)
    │  REVIEW GATE ── code-reviewer ‖ security-reviewer ‖ ux-reviewer*  (parallel, read-only)
    │  resolve     ── fix Critical/High, re-verify, re-review changed dimensions
-   └─ report      ──► you run /ship → gated conventional commit
+   └─ report      ── auto-commit on green (work branch) ──► /ship to push / open a PR
                                           * ux-reviewer only when the diff touches UI
 ```
 
@@ -74,26 +74,31 @@ The same machinery runs in two modes — pick by the work:
 
 ```
 /prototype <vision>
-   │  product-designer ── vision → spec + MILESTONES + UX decisions + ASSUMPTIONS
-   │
-   │  ┌─ per milestone ───────────────────────────────────────────────┐
+   │  KICKOFF (interactive)  ── product-designer proposes the few high-leverage
+   │     questions → you answer (AskUserQuestion) → lean .agentic/spec.md written
+   │     → spec checkpoint (one confirm) → gate closes, no more questions
+   │                                              (headless: skip, use defaults)
+   │  ┌─ per milestone, autonomous ───────────────────────────────────┐
    │  │  plan → implement (expansive) → /verify (+ runtime smoke)      │
    │  │  REVIEW GATE: code ‖ security ‖ ux  → resolve until clean      │
-   │  │  GAP REVIEW (product-designer): ITERATE · ADVANCE · DONE · ASK │
+   │  │     (stuck? circuit-breaker: 3 tries, then route around/stop)  │
+   │  │  GAP REVIEW vs spec: ITERATE · ADVANCE · DONE · ASK            │
+   │  │  checkpoint → .agentic/progress.md  (survives compaction)      │
    │  └───────────────────────────────────────────────────────────────┘
    │        ⟲ until spec met, round budget spent (default 3), or ASK
-   └─ report (with assumptions) ──► you run /ship
+   └─ commit each milestone on green · report ──► /ship to push / open a PR
 ```
 
 The orchestrator is the main Claude thread; the agents are isolated-context leaf workers that **find** problems and assess progress. The orchestrator **fixes** and coordinates. (Subagents can't spawn subagents, which is why coordination lives in the main thread.)
 
 ## Usage
 
-- **Prototype from a vision:** `/prototype a habit tracker with streaks and weekly stats` — designs it, builds it, iterates across milestones, screenshots it.
+- **Prototype from a vision:** `/prototype a habit tracker with streaks and weekly stats` — a few kickoff questions, then it designs, builds, iterates across milestones, and screenshots it autonomously.
 - **Precision change:** `/build add rate limiting to the login endpoint`
 - **Just review what you have:** `/review` (or `/review staged`)
 - **Just run the gate:** `/verify`
-- **Commit when clean:** `/ship` — or `/ship feat: add login rate limiting`
+- **Auto-commit:** the loop commits on green automatically, on a work branch — you don't run anything.
+- **Publish when ready:** `/ship` re-confirms the gate, curates the commit, and pushes / opens a PR if you ask — e.g. `/ship feat: add login rate limiting`.
 - **Headless / CI:** `claude -p "/build add rate limiting to the login endpoint"` (the sandbox VM must be reachable via `ssh sandbox`)
 - **Deeper one-off audits:** the built-in `/code-review` and `/security-review` skills complement the in-loop gate.
 
@@ -133,6 +138,7 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Verify gate** — edit `.claude/commands/verify.md` to add an ecosystem or point at your repo's exact build/test commands (they run on the VM over SSH).
 - **Runtime smoke / e2e** — edit `.claude/commands/verify.md` and `.claude/agents/e2e-tester.md` to set how your app boots and which user flows the smoke drives.
 - **Iteration depth** — change the default prototype round budget in `.claude/commands/prototype.md`, or pass `rounds=N` to `/prototype`.
+- **Run artifacts** — a `/prototype` run writes its frozen vision to `.agentic/spec.md` and live progress to `.agentic/progress.md` (both git-ignored). Read them to see where an autonomous run is, or edit `spec.md` between runs to redirect it.
 - **Definition of Done** — edit `CLAUDE.md`; it's the contract every task is held to.
 - **Model/cost** — agent frontmatter sets the model (`code-reviewer` → `sonnet` for speed; `security-reviewer` → `inherit`, i.e. your session model, for rigor). Tune per the cost/depth trade-off you want.
 
@@ -143,6 +149,8 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Read-only reviewers** — reviewers can't edit, so they can never silently "fix and pass" their own findings. Clean find/fix separation. This now extends to **UX**: `ux-reviewer` critiques the rendered UI with fresh eyes instead of the builder grading its own design.
 - **Runtime smoke, not just unit tests** — the gate boots and drives the assembled app (browser / API / CLI), so "it compiles" can't masquerade as "it works". The screenshots double as e2e evidence and as the input to independent UX review.
 - **Generative + evaluative symmetry** — the stack pairs a *maker* and a *critic* for each concern: code (`planner` → `code-reviewer`/`security-reviewer`) and product/UX (`product-designer` → `ux-reviewer`), with `product-designer` also closing the loop by gap-checking the build against its own spec.
+- **Commit vs. publish** — the agent auto-commits on a work branch once the gate is green (local, reversible, no prompt), but *publishing* — push, PR, release — stays human-gated via `/ship`. The boundary is external visibility, not the git verb.
+- **Built for long autonomous runs** — `/prototype` front-loads a brief kickoff interview, then runs hands-off. The frozen vision (`.agentic/spec.md`) and a progress log (`.agentic/progress.md`) are durable, so a run survives context compaction; a circuit-breaker caps repeated failed fixes (3 tries) so a stuck check can't burn the session. `ux-reviewer` compares screenshots round-over-round to catch UI regressions.
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
 - **Future hardening** — if you ever want a *non-bypassable* gate (e.g. for unattended fleets), add a `Stop` hook that refuses to end a turn until `/review` has passed. Intentionally omitted here to keep enforcement agent-based.
