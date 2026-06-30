@@ -13,7 +13,7 @@ Create a commit for the current changes — but only if the Definition of Done h
 
    If either fails, STOP and report what is blocking — do not commit.
 
-2. **Stage & inspect.** Show `git status` and `git diff`. Stage the intended changes with `git add`. Never stage secrets, `.env` files, or unrelated artifacts.
+2. **Stage & inspect.** Show `git status` and `git diff`. Stage the intended changes with `git add`. Never stage secrets, `.env` files, run artifacts under `.agentic/`, or unrelated files.
 
 3. **Commit.** Write a [Conventional Commits](https://www.conventionalcommits.org/) message (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:` …). Use `$ARGUMENTS` as the subject if provided; otherwise derive a concise, accurate subject from the diff. Keep the body to the what and the why.
 

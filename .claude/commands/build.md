@@ -1,5 +1,5 @@
 ---
-description: Run a task end-to-end through the full agentic loop — plan, implement, verify, review (code + security), resolve, report.
+description: Run a task end-to-end through the full agentic loop — plan, implement, verify, review (code + security + UX), resolve, report.
 argument-hint: [task description]
 ---
 
@@ -13,11 +13,11 @@ Execution model: you **edit on the host**, but **all builds/tests/installs run o
 
 2. **Implement.** Make the smallest viable change, reusing existing code and matching conventions. Resolve any open question from the plan first — ask the user only if it is a genuine ambiguity per CLAUDE.md's autonomy policy.
 
-3. **Verify.** Run `/verify` and drive build + lint/type-check + tests to green. For non-trivial coverage, dispatch the `test-engineer` agent to add tests.
+3. **Verify.** Run `/verify` and drive build + lint/type-check + tests **and the runtime smoke** to green. For non-trivial unit coverage dispatch the `test-engineer` agent; for a runnable app, `/verify` boots and drives it via `e2e-tester`.
 
-4. **Review gate (mandatory).** In a single message, dispatch BOTH `code-reviewer` and `security-reviewer` in parallel on the current diff. Give each: the `git diff`, the task description, and pointers to the relevant files (they start with a clean context and cannot see this conversation).
+4. **Review gate (mandatory).** In a single message, dispatch `code-reviewer` and `security-reviewer` in parallel on the current diff — and `ux-reviewer` too if the change touches UI (give it the task/spec; it reads the screenshots from verify). Give each: the `git diff`, the task description, and pointers to the relevant files (they start with a clean context and cannot see this conversation).
 
-5. **Resolve.** Fix every Critical and High finding, plus reasonable Mediums. Re-run `/verify`. If you changed security-relevant code, re-dispatch `security-reviewer`. Repeat until both reviewers report `GATE: PASS`.
+5. **Resolve.** Fix every Critical and High finding, plus reasonable Mediums. Re-run `/verify`. Re-dispatch the reviewer for any dimension whose code you changed (`security-reviewer` for security-relevant fixes, `ux-reviewer` for UI fixes). Repeat until every dispatched reviewer reports `GATE: PASS`.
 
 6. **Report.** Summarize: what changed (files), what the reviews found and how you resolved it, the test results, and any accepted Low-severity items. Do **not** commit automatically — tell the user to run `/ship` when ready.
 

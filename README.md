@@ -20,15 +20,19 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
     ├── settings.bash-sandbox.json.example # mac/Linux/WSL2, no separate VM: built-in OS Bash sandbox
     ├── settings.vm-bypass.json.example    # when Claude Code runs INSIDE a disposable VM/container
     ├── agents/
-    │   ├── planner.md                 # decomposes a task → plan + test strategy   (read-only)
-    │   ├── code-reviewer.md           # reviews diff: correctness / quality / reuse (read-only)
-    │   ├── security-reviewer.md       # audits diff against a threat checklist      (read-only)
-    │   └── test-engineer.md           # writes & runs meaningful tests
+    │   ├── product-designer.md        # vision → spec + milestones; gap-checks build vs spec (read-only)
+    │   ├── planner.md                 # decomposes a task → plan + test strategy            (read-only)
+    │   ├── test-engineer.md           # writes & runs meaningful unit tests
+    │   ├── e2e-tester.md              # boots the app on the VM, smokes it, screenshots it
+    │   ├── code-reviewer.md           # reviews diff: correctness / quality / reuse          (read-only)
+    │   ├── security-reviewer.md       # audits diff against a threat checklist               (read-only)
+    │   └── ux-reviewer.md             # critiques the rendered UI vs the spec                (read-only)
     └── commands/
-        ├── build.md     →  /build     # the full loop, end to end
-        ├── verify.md    →  /verify    # language-agnostic build + lint + test gate
-        ├── review.md    →  /review    # both reviewers in parallel → one report
-        └── ship.md      →  /ship      # gated conventional commit (user-only)
+        ├── build.md      →  /build     # the full loop in precision posture
+        ├── prototype.md  →  /prototype # vision → app: iterate across milestones
+        ├── verify.md     →  /verify    # build + lint + test + runtime smoke gate
+        ├── review.md     →  /review    # reviewers in parallel → one report
+        └── ship.md       →  /ship      # gated conventional commit (user-only)
 ```
 
 ## Install
@@ -40,26 +44,53 @@ cp -r /path/to/agentic-dev-stack/.claude  /path/to/your-repo/.claude
 cp    /path/to/agentic-dev-stack/CLAUDE.md /path/to/your-repo/CLAUDE.md
 ```
 
-(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the four agents loaded, and `/` to see `/build`, `/verify`, `/review`, `/ship`.
+The runtime smoke writes screenshots under `.agentic/` — add **`.agentic/`** to your repo's `.gitignore` so that evidence (it can contain secrets or PII from the booted app) is never committed. As a backstop the stack also drops a `.agentic/.gitignore` of `*` on first run.
 
-## The loop
+(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the seven agents loaded, and `/` to see `/build`, `/prototype`, `/verify`, `/review`, `/ship`.
+
+## Two postures
+
+The same machinery runs in two modes — pick by the work:
+
+- **`/build <task>` — precision.** Changing an existing system: smallest viable change, reuse first, match conventions. A single pass with an inner convergence loop.
+- **`/prototype <vision>` — prototype.** Turning a broad vision into a working app: it makes the product and UX calls itself (recording assumptions) and **iterates across milestones** until the spec is met. Decide-and-build.
+
+### Precision loop — `/build`
 
 ```
 /build <task>
    │  understand  ── reuse first; Explore agent for broad search
    │  plan        ── planner agent (non-trivial tasks)
    │  implement   ── edit on host; smallest viable change, match conventions
-   │  /verify     ── sync to VM, run build + lint + tests on the VM → green  (test-engineer adds tests)
-   │  REVIEW GATE ── code-reviewer ‖ security-reviewer  (parallel, read-only, on the host diff)
-   │  resolve     ── fix Critical/High, re-verify, re-review if security code changed
+   │  /verify     ── on the VM: build + lint + tests + RUNTIME SMOKE → green
+   │                   (test-engineer adds units · e2e-tester boots & drives the app)
+   │  REVIEW GATE ── code-reviewer ‖ security-reviewer ‖ ux-reviewer*  (parallel, read-only)
+   │  resolve     ── fix Critical/High, re-verify, re-review changed dimensions
    └─ report      ──► you run /ship → gated conventional commit
+                                          * ux-reviewer only when the diff touches UI
 ```
 
-The orchestrator is the main Claude thread; the agents are isolated-context leaf workers that **find** problems. The orchestrator **fixes** them. (Subagents can't spawn subagents, which is why coordination lives in the main thread.)
+### Prototype loop — `/prototype`
+
+```
+/prototype <vision>
+   │  product-designer ── vision → spec + MILESTONES + UX decisions + ASSUMPTIONS
+   │
+   │  ┌─ per milestone ───────────────────────────────────────────────┐
+   │  │  plan → implement (expansive) → /verify (+ runtime smoke)      │
+   │  │  REVIEW GATE: code ‖ security ‖ ux  → resolve until clean      │
+   │  │  GAP REVIEW (product-designer): ITERATE · ADVANCE · DONE · ASK │
+   │  └───────────────────────────────────────────────────────────────┘
+   │        ⟲ until spec met, round budget spent (default 3), or ASK
+   └─ report (with assumptions) ──► you run /ship
+```
+
+The orchestrator is the main Claude thread; the agents are isolated-context leaf workers that **find** problems and assess progress. The orchestrator **fixes** and coordinates. (Subagents can't spawn subagents, which is why coordination lives in the main thread.)
 
 ## Usage
 
-- **Interactive:** `/build add rate limiting to the login endpoint`
+- **Prototype from a vision:** `/prototype a habit tracker with streaks and weekly stats` — designs it, builds it, iterates across milestones, screenshots it.
+- **Precision change:** `/build add rate limiting to the login endpoint`
 - **Just review what you have:** `/review` (or `/review staged`)
 - **Just run the gate:** `/verify`
 - **Commit when clean:** `/ship` — or `/ship feat: add login rate limiting`
@@ -89,6 +120,7 @@ The agent runs on a **limited host** and offloads real execution to an **isolate
    The default profile's allow-rule `Bash(ssh sandbox *)` keys off this exact alias — keep `sandbox`, or rename it in both the SSH config and `settings.json`.
 3. Set the remote working directory via `SANDBOX_REMOTE_DIR` in `.claude/settings.json` `env` (default `~/agentic-workspace`).
 4. Make sure `rsync` is available on host and VM for fast syncs (`scp -r` is the fallback).
+5. For **frontend e2e** — the runtime smoke that boots a browser and screenshots the UI — install a headless browser on the VM: `npx playwright install --with-deps chromium`. Without it, `/verify`'s runtime smoke degrades gracefully to an HTTP-level check and `ux-reviewer` reports that no screenshots were available.
 
 Now `/verify` syncs the working tree to the VM and runs build/lint/test there; the host only edits and commits. Edits happen on the host (Claude's `Read`/`Edit`/`Write`), execution happens on the VM (`ssh sandbox …`). `deny` rules are enforced from every scope and even override `allow`, so the host floor holds regardless of mode.
 
@@ -99,6 +131,8 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Sandbox target** — change the SSH alias (`sandbox`) and remote dir (`SANDBOX_REMOTE_DIR`) in `.claude/settings.json`; keep the `Bash(ssh <alias> *)` allow-rule in sync.
 - **Security checklist** — edit `.claude/agents/security-reviewer.md`; add your domain's threats (e.g. payment flows, PII handling, tenancy isolation).
 - **Verify gate** — edit `.claude/commands/verify.md` to add an ecosystem or point at your repo's exact build/test commands (they run on the VM over SSH).
+- **Runtime smoke / e2e** — edit `.claude/commands/verify.md` and `.claude/agents/e2e-tester.md` to set how your app boots and which user flows the smoke drives.
+- **Iteration depth** — change the default prototype round budget in `.claude/commands/prototype.md`, or pass `rounds=N` to `/prototype`.
 - **Definition of Done** — edit `CLAUDE.md`; it's the contract every task is held to.
 - **Model/cost** — agent frontmatter sets the model (`code-reviewer` → `sonnet` for speed; `security-reviewer` → `inherit`, i.e. your session model, for rigor). Tune per the cost/depth trade-off you want.
 
@@ -106,7 +140,9 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 
 - **Two-layer security model** — *isolation* (the sandbox VM / OS sandbox) protects the **host**; the *review gate* is semantic and protects the **codebase**. Neither substitutes for the other, and the stack ships both.
 - **Review-agents enforcement, not blocking hooks** — the gate is semantic (AI review) and lives in the workflow, so it adapts to any language without per-repo hook scripts.
-- **Read-only reviewers** — reviewers can't edit, so they can never silently "fix and pass" their own findings. Clean find/fix separation.
+- **Read-only reviewers** — reviewers can't edit, so they can never silently "fix and pass" their own findings. Clean find/fix separation. This now extends to **UX**: `ux-reviewer` critiques the rendered UI with fresh eyes instead of the builder grading its own design.
+- **Runtime smoke, not just unit tests** — the gate boots and drives the assembled app (browser / API / CLI), so "it compiles" can't masquerade as "it works". The screenshots double as e2e evidence and as the input to independent UX review.
+- **Generative + evaluative symmetry** — the stack pairs a *maker* and a *critic* for each concern: code (`planner` → `code-reviewer`/`security-reviewer`) and product/UX (`product-designer` → `ux-reviewer`), with `product-designer` also closing the loop by gap-checking the build against its own spec.
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
 - **Future hardening** — if you ever want a *non-bypassable* gate (e.g. for unattended fleets), add a `Stop` hook that refuses to end a turn until `/review` has passed. Intentionally omitted here to keep enforcement agent-based.
