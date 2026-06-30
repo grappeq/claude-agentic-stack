@@ -1,10 +1,8 @@
 # Claude Agentic Stack
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+This is the Claude Code config stack I've been using and iterating on. It makes Claude work like an autonomous, senior engineering team-of-one — it plans, implements, verifies, and **reviews its own work for correctness and security** before calling anything done.
 
-A portable, drop-in **Claude Code orchestration configuration** that makes Claude work as an autonomous, senior engineering team-of-one: it plans, implements, verifies, and **reviews its own work for correctness and security** before calling anything done.
-
-The config *is* the product. Copy it into any repository and Claude Code starts following the loop below.
+It's just config: copy it into any repository and Claude Code starts following the loop below. Sharing it in case it's useful to someone else — it's still evolving.
 
 ## Philosophy
 
@@ -98,15 +96,13 @@ The orchestrator is the main Claude thread; the agents are isolated-context leaf
 
 ## Three loops
 
-The stack converges through three loops. Naming them is the fastest way to see how a one-line request becomes finished work:
+Work converges through three loops — it helps to name them:
 
-| | Loop | What it does | Where |
-|---|------|--------------|-------|
-| **L1** | **Convergence** (inner) | `resolve → re-verify → re-review` until verify is green and every reviewer reports `GATE: PASS`. A circuit-breaker caps repeated failed fixes so it can't thrash. | Automatic — both `/build` and `/prototype` |
-| **L2** | **Improvement** (outer) | Once a milestone is correct, `product-designer` gap-checks the running app against the frozen spec and the loop builds the next increment — milestone by milestone — until the vision is met, the round budget is spent (default 3), or the gap review signals scope beyond the vision (then it stops and asks). | `/prototype`, wrapping L1 |
-| **L3** | **You** (human) | Each run ends with a report and the assumptions it made. You read it and send the next prompt to redirect; edit `.agentic/spec.md` to steer the next run. | Between runs |
+- **L1 — Convergence loop (inner).** `resolve → re-verify → re-review` until smoke is green and code / security / ux are clean. This is *reactive*: it drives the work to a correctness bar by fixing defects. But it never makes the product *better* — only *correct*. A blank-but-valid app passes L1.
+- **L2 — Improvement loop (outer).** Build → critique against the vision → build the next increment → repeat. This is *generative*: it makes the thing more complete and more polished over successive rounds. It's the half that takes a broad vision and improves on it itself, rather than only making a given change correct — and it's what `/prototype` adds on top of L1.
+- **L3 — Human iteration.** You read the report (and screenshots) and send the next prompt — or edit `.agentic/spec.md` to steer the next run. Always there.
 
-The distinction that matters: **L1 makes work _correct_, L2 makes it _complete_, L3 is where _you_ point it.** `/build` is mostly L1; `/prototype` is L2 over L1, then back to you.
+So `/build` is mostly L1; `/prototype` is L2 wrapping L1, then back to you (L3).
 
 ## Usage
 
