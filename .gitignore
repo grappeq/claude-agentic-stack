@@ -9,6 +9,18 @@ secrets/
 *.pem
 *_rsa
 *_rsa.pub
+*_ed25519
+*_ed25519.pub
+*_ecdsa
+*_ecdsa.pub
+*_dsa
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+*.keytab
 
 # Common build / dependency artifacts (this stack is dropped into many ecosystems)
 node_modules/

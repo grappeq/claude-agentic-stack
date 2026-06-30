@@ -1,5 +1,7 @@
 # Agentic Dev Stack
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A portable, drop-in **Claude Code orchestration configuration** that makes Claude work as an autonomous, senior engineering team-of-one: it plans, implements, verifies, and **reviews its own work for correctness and security** before calling anything done.
 
 The config *is* the product. Copy it into any repository and Claude Code starts following the loop below.
@@ -37,12 +39,15 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
 
 ## Install
 
-Copy the two pieces into the root of your target repo:
+Clone the repo, then copy the two pieces into the root of your target repo:
 
 ```bash
-cp -r /path/to/agentic-dev-stack/.claude  /path/to/your-repo/.claude
-cp    /path/to/agentic-dev-stack/CLAUDE.md /path/to/your-repo/CLAUDE.md
+git clone https://github.com/grappeq/agentic-dev-stack.git
+cp -r agentic-dev-stack/.claude   /path/to/your-repo/.claude
+cp    agentic-dev-stack/CLAUDE.md /path/to/your-repo/CLAUDE.md
 ```
+
+This assumes a fresh target; if your repo already has a `.claude/`, replace or merge it rather than nesting a second one inside.
 
 The runtime smoke writes screenshots under `.agentic/` — add **`.agentic/`** to your repo's `.gitignore` so that evidence (it can contain secrets or PII from the booted app) is never committed. As a backstop the stack also drops a `.agentic/.gitignore` of `*` on first run.
 
@@ -118,7 +123,7 @@ The agent runs on a **limited host** and offloads real execution to an **isolate
 2. Add an SSH alias named **`sandbox`** to `~/.ssh/config` on the host:
    ```
    Host sandbox
-       HostName 10.0.0.42
+       HostName <your-vm-ip>
        User dev
        IdentityFile ~/.ssh/sandbox_key
    ```
@@ -154,3 +159,7 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
 - **Future hardening** — if you ever want a *non-bypassable* gate (e.g. for unattended fleets), add a `Stop` hook that refuses to end a turn until `/review` has passed. Intentionally omitted here to keep enforcement agent-based.
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Kacper Grabowski. Free to use, fork, and adapt.
