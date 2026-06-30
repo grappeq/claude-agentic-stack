@@ -1,0 +1,29 @@
+# Local, machine-specific Claude Code settings — never commit
+.claude/settings.local.json
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*_rsa
+*_rsa.pub
+
+# Common build / dependency artifacts (this stack is dropped into many ecosystems)
+node_modules/
+dist/
+build/
+out/
+target/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.gradle/
+*.class
+
+# Editor / OS noise
+.DS_Store
+.idea/
+*.swp
