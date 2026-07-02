@@ -11,7 +11,7 @@ Execution model: you **edit on the host**, but **all builds/tests/installs run o
 
 1. **Understand & plan.** Restate the goal and acceptance criteria. For anything beyond a trivial one-file change, dispatch the `planner` agent to produce an ordered plan, the files to touch, a test strategy, and risks. Use the `Explore` agent for broad search so your context stays clean.
 
-2. **Implement.** Make the smallest viable change, reusing existing code and matching conventions. Resolve any open question from the plan first — ask the user only if it is a genuine ambiguity per CLAUDE.md's autonomy policy.
+2. **Implement.** Make the smallest viable change, reusing existing code and matching conventions. Resolve any open question from the plan first — ask the user only if it is a genuine ambiguity per CLAUDE.md's autonomy policy. If the sandbox VM isn't already warm, first kick off a one-time **background** sync + dependency install on it (CLAUDE.md → *Where things run* → *Warm the sandbox early*) so the cold install finishes while you edit and `/verify`'s install is a no-op.
 
 3. **Verify.** Run `/verify` and drive build + lint/type-check + tests **and the runtime smoke** to green. For non-trivial unit coverage dispatch the `test-engineer` agent; for a runnable app, `/verify` boots and drives it via `e2e-tester`.
 

@@ -9,6 +9,7 @@ Claude Code runs on a **permission-limited host**; a separate **sandbox VM** (SS
 - **On the host:** read and edit files in the workspace, run `git`, and sync code to the VM. Nothing destructive; host secrets (`~/.ssh`, `~/.aws`, `.env`, …) are off-limits.
 - **On the sandbox VM (`ssh sandbox …`):** all builds, tests, installs, servers, and any risky, long-running, or networked command. You have free rein here — it's disposable.
 - **Sync before you run.** The host is the source of truth for code; push the working tree to the VM before executing: `rsync -az --delete --exclude '.git/' ./ sandbox:"$SANDBOX_REMOTE_DIR"/` (fall back to `scp -r` if `rsync` is missing). `/verify` does this for you.
+- **Warm the sandbox early (optional speedup).** The first dependency install is slow and otherwise lands on the critical path at verify time. As soon as the dependency manifest is known, kick off a one-time **background** sync (using `/verify`'s excludes) + dependency install on the VM so it runs *while you implement*; by verify time the dependency cache is warm and `/verify`'s install is a fast no-op. Use the project's own install for its ecosystem — detected from the manifest exactly as `/verify` does — because the dependency caches (`node_modules/`, `.venv/`, and the language's own package cache) survive the excluded-`--delete` syncs. Best-effort only: `/verify` still runs the authoritative install, so a failed or skipped warm-up costs only the missed speedup, never correctness. Skip it when the VM is already warm.
 
 If `ssh sandbox true` fails, stop and report it — do **not** silently run builds/tests on the limited host.
 
@@ -102,7 +103,7 @@ The line is **commit vs. publish**, not human vs. agent:
 
 ## Orchestration contract
 
-You are the **orchestrator** (the main thread). Subagents are leaf workers — they cannot spawn other subagents, so you coordinate them. Reviewers **find**; you **fix**.
+You are the **orchestrator** (the main thread) — and also the **implementer**: writing and fixing production code is your job, which is why there is deliberately **no "software-engineer" agent**. Implementation wants the full context you hold — the plan, the spec, the live review findings — and stays coupled to the resolve loop, where you fix what the reviewers find. Subagents are leaf workers — they cannot spawn other subagents, so you coordinate them — and each is a role that *benefits* from an isolated, clean context: broad search, adversarial review, or bounded authoring against a frozen diff (`test-engineer` / `e2e-tester` do edit code, but only test code against a fixed change — never open-ended implementation). Reviewers **find**; you **fix**.
 
 | Agent | Use it to | Edits code? |
 |-------|-----------|:-----------:|
