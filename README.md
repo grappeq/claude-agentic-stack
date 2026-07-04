@@ -32,7 +32,8 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
         ├── prototype.md  →  /prototype # vision → app: iterate across milestones
         ├── verify.md     →  /verify    # build + lint + test + runtime smoke gate
         ├── review.md     →  /review    # reviewers in parallel → one report
-        └── ship.md       →  /ship      # finalize: curate commit + push/PR (user-only)
+        ├── sync.md       →  /sync      # bring branch up to date with base; re-gate (local)
+        └── ship.md       →  /ship      # finalize: gate + commit + sync + push + PR
 ```
 
 ## Install
@@ -49,7 +50,7 @@ This assumes a fresh target; if your repo already has a `.claude/`, replace or m
 
 The runtime smoke writes screenshots under `.agentic/` — add **`.agentic/`** to your repo's `.gitignore` so that evidence (it can contain secrets or PII from the booted app) is never committed. As a backstop the stack also drops a `.agentic/.gitignore` of `*` on first run.
 
-(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the seven agents loaded, and `/` to see `/build`, `/prototype`, `/verify`, `/review`, `/ship`.
+(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the seven agents loaded, and `/` to see `/build`, `/prototype`, `/verify`, `/review`, `/sync`, `/ship`.
 
 ## Two postures
 
@@ -92,7 +93,7 @@ The same machinery runs in two modes — pick by the work:
    └─ commit each milestone on green · report ──► /ship to push / open a PR
 ```
 
-The orchestrator is the main Claude thread; the agents are isolated-context leaf workers that **find** problems and assess progress. The orchestrator **fixes** and coordinates. (Subagents can't spawn subagents, which is why coordination lives in the main thread.)
+The orchestrator is the main Claude thread — and the one that **writes the code**. The agents are isolated-context leaf workers that **find** problems and assess progress; the orchestrator **implements**, **fixes**, and coordinates. There's deliberately **no "software-engineer" agent**: production implementation wants the full context the main thread already holds — the plan, the spec, the live review findings — and stays coupled to the fix loop, whereas search, review, and test-authoring are the bounded jobs that actually benefit from a clean, isolated context. (Subagents also can't spawn subagents, so coordination lives in the main thread regardless.)
 
 ## Three loops
 
@@ -111,7 +112,8 @@ So `/build` is mostly L1; `/prototype` is L2 wrapping L1, then back to you (L3).
 - **Just review what you have:** `/review` (or `/review staged`)
 - **Just run the gate:** `/verify`
 - **Auto-commit:** the loop commits on green automatically, on a work branch — you don't run anything.
-- **Publish when ready:** `/ship` re-confirms the gate, curates the commit, and pushes / opens a PR if you ask — e.g. `/ship feat: add login rate limiting`.
+- **Sync with the base branch:** `/sync` brings your work branch up to date with master — resolving any conflicts safely and re-running the gate — local only, never pushes. `/ship` runs it automatically first, but you can also run it mid-work.
+- **Publish when ready:** `/ship` re-confirms the gate, curates the commit, syncs with the base, then pushes and opens a PR — invoking it (the model can't self-trigger it) is your go-ahead to publish. e.g. `/ship feat: add login rate limiting`.
 - **Headless / CI:** `claude -p "/build add rate limiting to the login endpoint"` (the sandbox VM must be reachable via `ssh sandbox`)
 - **Deeper one-off audits:** the built-in `/code-review` and `/security-review` skills complement the in-loop gate.
 
@@ -162,8 +164,10 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Read-only reviewers** — reviewers can't edit, so they can never silently "fix and pass" their own findings. Clean find/fix separation. This now extends to **UX**: `ux-reviewer` critiques the rendered UI with fresh eyes instead of the builder grading its own design.
 - **Runtime smoke, not just unit tests** — the gate boots and drives the assembled app (browser / API / CLI), so "it compiles" can't masquerade as "it works". The screenshots double as e2e evidence and as the input to independent UX review.
 - **Generative + evaluative symmetry** — the stack pairs a *maker* and a *critic* for each concern: code (`planner` → `code-reviewer`/`security-reviewer`) and product/UX (`product-designer` → `ux-reviewer`), with `product-designer` also closing the loop by gap-checking the build against its own spec.
+- **The orchestrator is the implementer** — there's no dedicated "coder" agent, by design. The subagents are the roles that gain from an isolated context (broad search, adversarial review, bounded test-authoring against a frozen diff); open-ended production implementation instead wants the orchestrator's full context and lives in the resolve loop where it fixes what the reviewers find. Delegating it would break the find/fix separation and add lossy clean-context round-trips on every fix.
 - **Commit vs. publish** — the agent auto-commits on a work branch once the gate is green (local, reversible, no prompt), but *publishing* — push, PR, release — stays human-gated via `/ship`. The boundary is external visibility, not the git verb.
 - **Built for long autonomous runs** — `/prototype` front-loads a brief kickoff interview, then runs hands-off. The frozen vision (`.agentic/spec.md`) and a progress log (`.agentic/progress.md`) are durable, so a run survives context compaction; a circuit-breaker caps repeated failed fixes (3 tries) so a stuck check can't burn the session. `ux-reviewer` compares screenshots round-over-round to catch UI regressions.
+- **Warm sandbox, cold path removed** — the loop kicks off the VM dependency install during the *implement* phase, so it finishes in the background instead of sitting cold on the critical path at `/verify`. Ecosystem-agnostic (it uses whatever install the manifest implies) and best-effort — `/verify` still runs the authoritative install, so the gate is unchanged; it only reclaims latency.
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
 - **Future hardening** — if you ever want a *non-bypassable* gate (e.g. for unattended fleets), add a `Stop` hook that refuses to end a turn until `/review` has passed. Intentionally omitted here to keep enforcement agent-based.

@@ -9,6 +9,7 @@ Claude Code runs on a **permission-limited host**; a separate **sandbox VM** (SS
 - **On the host:** read and edit files in the workspace, run `git`, and sync code to the VM. Nothing destructive; host secrets (`~/.ssh`, `~/.aws`, `.env`, …) are off-limits.
 - **On the sandbox VM (`ssh sandbox …`):** all builds, tests, installs, servers, and any risky, long-running, or networked command. You have free rein here — it's disposable.
 - **Sync before you run.** The host is the source of truth for code; push the working tree to the VM before executing: `rsync -az --delete --exclude '.git/' ./ sandbox:"$SANDBOX_REMOTE_DIR"/` (fall back to `scp -r` if `rsync` is missing). `/verify` does this for you.
+- **Warm the sandbox early (optional speedup).** The first dependency install is slow and otherwise lands on the critical path at verify time. As soon as the dependency manifest is known, kick off a one-time **background** sync (using `/verify`'s excludes) + dependency install on the VM so it runs *while you implement*; by verify time the dependency cache is warm and `/verify`'s install is a fast no-op. Use the project's own install for its ecosystem — detected from the manifest exactly as `/verify` does — because the dependency caches (`node_modules/`, `.venv/`, and the language's own package cache) survive the excluded-`--delete` syncs. Best-effort only: `/verify` still runs the authoritative install, so a failed or skipped warm-up costs only the missed speedup, never correctness. Skip it when the VM is already warm.
 
 If `ssh sandbox true` fails, stop and report it — do **not** silently run builds/tests on the limited host.
 
@@ -88,7 +89,7 @@ Act **without asking** for:
 
 **Stop and ask the user** when:
 - Requirements are ambiguous or self-contradictory, or "success" cannot be defined. *Exception — prototype posture front-loads a **brief kickoff interview**; once the spec in `.agentic/spec.md` is frozen and confirmed, resolve product/UX ambiguity yourself (strongest reasonable option, recorded as an assumption) and ask nothing further. Stop only when the ambiguity changes the fundamental goal or needs scope beyond the stated vision.*
-- An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails.
+- An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails. (The human-invoked `/ship` is the sanctioned path for push/PR — invoking it is the ask; force-push stays denied even there.)
 - You would need a real secret/credential you do not have.
 
 Everything else: proceed.
@@ -98,11 +99,11 @@ Everything else: proceed.
 The line is **commit vs. publish**, not human vs. agent:
 
 - **Commit — automatic, on green.** When the Definition of Done holds, commit the change yourself: a [Conventional Commits](https://www.conventionalcommits.org/) message, staging only intended files **by explicit path — never `git add -A` / `git add .`** (a blanket stage can sweep in `.agentic/`, secrets, or unrelated artifacts that the `.gitignore` doesn't happen to cover). Work on a **branch** — if you are on the default branch (`main` / `master`), create a work branch first. A local commit is reversible and never leaves the machine, so it needs no prompt. Never commit on a red gate.
-- **Publish — human-gated, always.** Pushing, force-pushing, opening a PR, or cutting a release are externally visible and hard to retract. Do these only when the user explicitly asks — `/ship` is the curated path for it.
+- **Publish — human-gated, always.** Pushing, force-pushing, opening a PR, or cutting a release are externally visible and hard to retract. Do these only when the user explicitly asks — and invoking `/ship` (which the model cannot self-trigger) **is** that explicit ask: it re-confirms the gate, curates the commit, syncs the branch with its base, then pushes and opens a PR. Force-push stays denied even there, and each push/PR surfaces a permission prompt as a backstop.
 
 ## Orchestration contract
 
-You are the **orchestrator** (the main thread). Subagents are leaf workers — they cannot spawn other subagents, so you coordinate them. Reviewers **find**; you **fix**.
+You are the **orchestrator** (the main thread) — and also the **implementer**: writing and fixing production code is your job, which is why there is deliberately **no "software-engineer" agent**. Implementation wants the full context you hold — the plan, the spec, the live review findings — and stays coupled to the resolve loop, where you fix what the reviewers find. Subagents are leaf workers — they cannot spawn other subagents, so you coordinate them — and each is a role that *benefits* from an isolated, clean context: broad search, adversarial review, or bounded authoring against a frozen diff (`test-engineer` / `e2e-tester` do edit code, but only test code against a fixed change — never open-ended implementation). Reviewers **find**; you **fix**.
 
 | Agent | Use it to | Edits code? |
 |-------|-----------|:-----------:|
@@ -117,4 +118,4 @@ You are the **orchestrator** (the main thread). Subagents are leaf workers — t
 
 Each subagent starts with a **clean context and cannot see this conversation**. When you dispatch one, always pass it: the task description and pointers to the relevant files — plus the actual diff (`git diff`) whenever it reviews or assesses an existing change (a front-of-loop agent like `product-designer` in SPEC mode has no diff yet).
 
-**Commands:** `/build <task>` runs the whole loop in precision posture · `/prototype <vision>` runs it in prototype posture, iterating across milestones · `/verify` runs the ecosystem gate (incl. runtime smoke) · `/review` runs the reviewers on the current diff · `/ship` finalizes — gates, curates any uncommitted work, and (only if asked) pushes or opens a PR. The loop commits on green by itself (see *Committing & publishing*). For deeper one-off audits beyond the in-loop gate, the built-in `/code-review` and `/security-review` skills are also available.
+**Commands:** `/build <task>` runs the whole loop in precision posture · `/prototype <vision>` runs it in prototype posture, iterating across milestones · `/verify` runs the ecosystem gate (incl. runtime smoke) · `/review` runs the reviewers on the current diff · `/sync` brings the current work branch up to date with its base branch — fetch, integrate, resolve conflicts safely, and re-gate (local only; never pushes) · `/ship` finalizes and publishes — it gates, curates the commit, syncs with the base, then pushes and opens a PR (human-invoked, so invoking it authorizes the publish). The loop commits on green by itself (see *Committing & publishing*). For deeper one-off audits beyond the in-loop gate, the built-in `/code-review` and `/security-review` skills are also available.
