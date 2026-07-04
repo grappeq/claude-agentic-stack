@@ -33,7 +33,7 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
         ├── verify.md     →  /verify    # build + lint + test + runtime smoke gate
         ├── review.md     →  /review    # reviewers in parallel → one report
         ├── sync.md       →  /sync      # bring branch up to date with base; re-gate (local)
-        └── ship.md       →  /ship      # finalize: sync + curate commit + push + PR
+        └── ship.md       →  /ship      # finalize: gate + commit + sync + push + PR
 ```
 
 ## Install
@@ -113,7 +113,7 @@ So `/build` is mostly L1; `/prototype` is L2 wrapping L1, then back to you (L3).
 - **Just run the gate:** `/verify`
 - **Auto-commit:** the loop commits on green automatically, on a work branch — you don't run anything.
 - **Sync with the base branch:** `/sync` brings your work branch up to date with master — resolving any conflicts safely and re-running the gate — local only, never pushes. `/ship` runs it automatically first, but you can also run it mid-work.
-- **Publish when ready:** `/ship` syncs, re-confirms the gate, curates the commit, then pushes and opens a PR — invoking it (the model can't self-trigger it) is your go-ahead to publish. e.g. `/ship feat: add login rate limiting`.
+- **Publish when ready:** `/ship` re-confirms the gate, curates the commit, syncs with the base, then pushes and opens a PR — invoking it (the model can't self-trigger it) is your go-ahead to publish. e.g. `/ship feat: add login rate limiting`.
 - **Headless / CI:** `claude -p "/build add rate limiting to the login endpoint"` (the sandbox VM must be reachable via `ssh sandbox`)
 - **Deeper one-off audits:** the built-in `/code-review` and `/security-review` skills complement the in-loop gate.
 
