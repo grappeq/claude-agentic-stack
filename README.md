@@ -32,7 +32,8 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
         ├── prototype.md  →  /prototype # vision → app: iterate across milestones
         ├── verify.md     →  /verify    # build + lint + test + runtime smoke gate
         ├── review.md     →  /review    # reviewers in parallel → one report
-        └── ship.md       →  /ship      # finalize: curate commit + push/PR (user-only)
+        ├── sync.md       →  /sync      # bring branch up to date with base; re-gate (local)
+        └── ship.md       →  /ship      # finalize: sync + curate commit + push + PR
 ```
 
 ## Install
@@ -49,7 +50,7 @@ This assumes a fresh target; if your repo already has a `.claude/`, replace or m
 
 The runtime smoke writes screenshots under `.agentic/` — add **`.agentic/`** to your repo's `.gitignore` so that evidence (it can contain secrets or PII from the booted app) is never committed. As a backstop the stack also drops a `.agentic/.gitignore` of `*` on first run.
 
-(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the seven agents loaded, and `/` to see `/build`, `/prototype`, `/verify`, `/review`, `/ship`.
+(Already have a `CLAUDE.md`? Merge the "Operating loop / Definition of Done / Orchestration contract" sections into yours.) Start Claude Code in the repo and run `/agents` to confirm the seven agents loaded, and `/` to see `/build`, `/prototype`, `/verify`, `/review`, `/sync`, `/ship`.
 
 ## Two postures
 
@@ -111,7 +112,8 @@ So `/build` is mostly L1; `/prototype` is L2 wrapping L1, then back to you (L3).
 - **Just review what you have:** `/review` (or `/review staged`)
 - **Just run the gate:** `/verify`
 - **Auto-commit:** the loop commits on green automatically, on a work branch — you don't run anything.
-- **Publish when ready:** `/ship` re-confirms the gate, curates the commit, and pushes / opens a PR if you ask — e.g. `/ship feat: add login rate limiting`.
+- **Sync with the base branch:** `/sync` brings your work branch up to date with master — resolving any conflicts safely and re-running the gate — local only, never pushes. `/ship` runs it automatically first, but you can also run it mid-work.
+- **Publish when ready:** `/ship` syncs, re-confirms the gate, curates the commit, then pushes and opens a PR — invoking it (the model can't self-trigger it) is your go-ahead to publish. e.g. `/ship feat: add login rate limiting`.
 - **Headless / CI:** `claude -p "/build add rate limiting to the login endpoint"` (the sandbox VM must be reachable via `ssh sandbox`)
 - **Deeper one-off audits:** the built-in `/code-review` and `/security-review` skills complement the in-loop gate.
 

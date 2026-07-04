@@ -89,7 +89,7 @@ Act **without asking** for:
 
 **Stop and ask the user** when:
 - Requirements are ambiguous or self-contradictory, or "success" cannot be defined. *Exception — prototype posture front-loads a **brief kickoff interview**; once the spec in `.agentic/spec.md` is frozen and confirmed, resolve product/UX ambiguity yourself (strongest reasonable option, recorded as an assumption) and ask nothing further. Stop only when the ambiguity changes the fundamental goal or needs scope beyond the stated vision.*
-- An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails.
+- An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails. (The human-invoked `/ship` is the sanctioned path for push/PR — invoking it is the ask; force-push stays denied even there.)
 - You would need a real secret/credential you do not have.
 
 Everything else: proceed.
@@ -99,7 +99,7 @@ Everything else: proceed.
 The line is **commit vs. publish**, not human vs. agent:
 
 - **Commit — automatic, on green.** When the Definition of Done holds, commit the change yourself: a [Conventional Commits](https://www.conventionalcommits.org/) message, staging only intended files **by explicit path — never `git add -A` / `git add .`** (a blanket stage can sweep in `.agentic/`, secrets, or unrelated artifacts that the `.gitignore` doesn't happen to cover). Work on a **branch** — if you are on the default branch (`main` / `master`), create a work branch first. A local commit is reversible and never leaves the machine, so it needs no prompt. Never commit on a red gate.
-- **Publish — human-gated, always.** Pushing, force-pushing, opening a PR, or cutting a release are externally visible and hard to retract. Do these only when the user explicitly asks — `/ship` is the curated path for it.
+- **Publish — human-gated, always.** Pushing, force-pushing, opening a PR, or cutting a release are externally visible and hard to retract. Do these only when the user explicitly asks — and invoking `/ship` (which the model cannot self-trigger) **is** that explicit ask: it syncs the branch with its base, re-confirms the gate, curates the commit, then pushes and opens a PR. Force-push stays denied even there, and each push/PR surfaces a permission prompt as a backstop.
 
 ## Orchestration contract
 
@@ -118,4 +118,4 @@ You are the **orchestrator** (the main thread) — and also the **implementer**:
 
 Each subagent starts with a **clean context and cannot see this conversation**. When you dispatch one, always pass it: the task description and pointers to the relevant files — plus the actual diff (`git diff`) whenever it reviews or assesses an existing change (a front-of-loop agent like `product-designer` in SPEC mode has no diff yet).
 
-**Commands:** `/build <task>` runs the whole loop in precision posture · `/prototype <vision>` runs it in prototype posture, iterating across milestones · `/verify` runs the ecosystem gate (incl. runtime smoke) · `/review` runs the reviewers on the current diff · `/ship` finalizes — gates, curates any uncommitted work, and (only if asked) pushes or opens a PR. The loop commits on green by itself (see *Committing & publishing*). For deeper one-off audits beyond the in-loop gate, the built-in `/code-review` and `/security-review` skills are also available.
+**Commands:** `/build <task>` runs the whole loop in precision posture · `/prototype <vision>` runs it in prototype posture, iterating across milestones · `/verify` runs the ecosystem gate (incl. runtime smoke) · `/review` runs the reviewers on the current diff · `/sync` brings the current work branch up to date with its base branch — fetch, integrate, resolve conflicts safely, and re-gate (local only; never pushes) · `/ship` finalizes and publishes — it syncs, gates, curates the commit, then pushes and opens a PR (human-invoked, so invoking it authorizes the publish). The loop commits on green by itself (see *Committing & publishing*). For deeper one-off audits beyond the in-loop gate, the built-in `/code-review` and `/security-review` skills are also available.
