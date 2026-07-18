@@ -65,7 +65,7 @@ The same machinery runs in two modes — pick by the work:
 ```
 /build <task>
    │  understand  ── reuse first; Explore agent for broad search
-   │  plan        ── planner agent (non-trivial) → durable goal: .agentic/goal.md
+   │  plan        ── planner agent (non-trivial) → durable target: .agentic/task.md
    │  implement   ── edit on host; smallest viable change, match conventions
    │  /verify     ── on the VM: build + lint + tests + RUNTIME SMOKE → green
    │                   (test-engineer adds units · e2e-tester boots & drives the app)
@@ -110,7 +110,7 @@ So `/build` is mostly L1; `/prototype` is L2 wrapping L1, then back to you (L3).
 
 - **Prototype from a vision:** `/prototype a habit tracker with streaks and weekly stats` — a few kickoff questions, then it designs, builds, iterates across milestones, and screenshots it autonomously.
 - **Precision change:** `/build add rate limiting to the login endpoint`
-- **Resume an interrupted run:** `/resume` — reloads the `.agentic/` state (goal/spec + progress), reconciles it with the repo, and re-enters the loop where it left off. Works after a crash, a closed session, or when you deliberately restart with a fresh context instead of grinding on a degraded one. Pass steering as arguments: `/resume drop the CSV export, ship the rest`.
+- **Resume an interrupted run:** `/resume` — reloads the `.agentic/` state (task/spec + progress), reconciles it with the repo, and re-enters the loop where it left off. Works after a crash, a closed session, or when you deliberately restart with a fresh context instead of grinding on a degraded one. Pass steering as arguments: `/resume drop the CSV export, ship the rest`.
 - **Just review what you have:** `/review` (or `/review staged`)
 - **Just run the gate:** `/verify`
 - **Auto-commit:** the loop commits on green automatically, on a work branch — you don't run anything.
@@ -155,7 +155,7 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Verify gate** — edit `.claude/commands/verify.md` to add an ecosystem or point at your repo's exact build/test commands (they run on the VM over SSH).
 - **Runtime smoke / e2e** — edit `.claude/commands/verify.md` and `.claude/agents/e2e-tester.md` to set how your app boots and which user flows the smoke drives.
 - **Iteration depth** — change the default prototype round budget in `.claude/commands/prototype.md`, or pass `rounds=N` to `/prototype`.
-- **Run artifacts** — a `/build` run writes its durable goal + plan checklist to `.agentic/goal.md`; a `/prototype` run writes its frozen vision to `.agentic/spec.md` and live progress to `.agentic/progress.md` (all git-ignored). Read them to see where an autonomous run is, edit them between runs to redirect it, or `/resume` to continue it.
+- **Run artifacts** — a `/build` run writes its task, acceptance criteria, and live plan checklist to `.agentic/task.md`; a `/prototype` run writes its frozen vision to `.agentic/spec.md` and live progress to `.agentic/progress.md` (all git-ignored). Read them to see where an autonomous run is, edit them between runs to redirect it, or `/resume` to continue it.
 - **Definition of Done** — edit `CLAUDE.md`; it's the contract every task is held to.
 - **Model/cost** — agent frontmatter sets the model (`code-reviewer` → `sonnet` for speed; `security-reviewer` → `inherit`, i.e. your session model, for rigor). Tune per the cost/depth trade-off you want.
 
@@ -169,7 +169,7 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **The orchestrator is the implementer** — there's no dedicated "coder" agent, by design. The subagents are the roles that gain from an isolated context (broad search, adversarial review, bounded test-authoring against a frozen diff); open-ended production implementation instead wants the orchestrator's full context and lives in the resolve loop where it fixes what the reviewers find. Delegating it would break the find/fix separation and add lossy clean-context round-trips on every fix.
 - **Commit vs. publish** — the agent auto-commits on a work branch once the gate is green (local, reversible, no prompt), but *publishing* — push, PR, release — stays human-gated via `/ship`. The boundary is external visibility, not the git verb.
 - **Built for long autonomous runs** — `/prototype` front-loads a brief kickoff interview, then runs hands-off. The frozen vision (`.agentic/spec.md`) and a progress log (`.agentic/progress.md`) are durable, so a run survives context compaction; a circuit-breaker caps repeated failed fixes (3 tries) so a stuck check can't burn the session. `ux-reviewer` compares screenshots round-over-round to catch UI regressions.
-- **Interruptible by design** — every run keeps a durable target on disk (`goal.md` for `/build`, `spec.md` + `progress.md` for `/prototype`), so `/resume` can re-enter it from a *fresh* session: reload the state, reconcile it against git (the repo wins on code facts), re-verify, continue. Deliberately restarting with a clean context beats grinding on a degraded one — the useful half of the "Ralph loop" pattern, without the bash loop.
+- **Interruptible by design** — every run keeps a durable target on disk (`task.md` for `/build`, `spec.md` + `progress.md` for `/prototype`), so `/resume` can re-enter it from a *fresh* session: reload the state, reconcile it against git (the repo wins on code facts), re-verify, continue. Deliberately restarting with a clean context beats grinding on a degraded one — the useful half of the "Ralph loop" pattern, without the bash loop.
 - **Warm sandbox, cold path removed** — the loop kicks off the VM dependency install during the *implement* phase, so it finishes in the background instead of sitting cold on the critical path at `/verify`. Ecosystem-agnostic (it uses whatever install the manifest implies) and best-effort — `/verify` still runs the authoritative install, so the gate is unchanged; it only reclaims latency.
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
