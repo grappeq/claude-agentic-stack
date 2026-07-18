@@ -89,6 +89,7 @@ Act **without asking** for:
 
 **Stop and ask the user** when:
 - Requirements are ambiguous or self-contradictory, or "success" cannot be defined. *Exception — prototype posture front-loads a **brief kickoff interview**; once the spec in `.agentic/spec.md` is frozen and confirmed, resolve product/UX ambiguity yourself (strongest reasonable option, recorded as an assumption) and ask nothing further. Stop only when the ambiguity changes the fundamental goal or needs scope beyond the stated vision.*
+- Existing `.agentic/` state records an unfinished run that a new `/build` or `/prototype` would overwrite — surface it and offer `/resume` or an explicit discard. *In a headless run this is a hard failure: report and stop; never auto-discard.*
 - An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails. (The human-invoked `/ship` is the sanctioned path for push/PR — invoking it is the ask; force-push stays denied even there.)
 - You would need a real secret/credential you do not have.
 
