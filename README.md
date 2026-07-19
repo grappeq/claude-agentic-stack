@@ -27,6 +27,8 @@ Claude runs inside an **isolation boundary** — an OS-level sandbox, or a dispo
     │   ├── code-reviewer.md           # reviews diff: correctness / quality / reuse          (read-only)
     │   ├── security-reviewer.md       # audits diff against a threat checklist               (read-only)
     │   └── ux-reviewer.md             # critiques the rendered UI vs the spec                (read-only)
+    ├── skills/
+    │   └── frontend-design/           # vendored Anthropic skill (Apache-2.0): distinctive web-UI design
     └── commands/
         ├── build.md      →  /build     # the full loop in precision posture
         ├── prototype.md  →  /prototype # vision → app: iterate across milestones
@@ -85,13 +87,14 @@ The same machinery runs in two modes — pick by the work:
    │                                              (headless: skip, use defaults)
    │  ┌─ per milestone, autonomous ───────────────────────────────────┐
    │  │  plan → implement (expansive) → /verify (+ runtime smoke)      │
-   │  │  REVIEW GATE: code ‖ security ‖ ux  → resolve until clean      │
+   │  │  REVIEW GATE: code ‖ security ‖ ux* → resolve until clean      │
    │  │     (stuck? circuit-breaker: 3 tries, then route around/stop)  │
    │  │  GAP REVIEW vs spec: ITERATE · ADVANCE · DONE · ASK            │
    │  │  checkpoint → .agentic/progress.md  (survives compaction)      │
    │  └───────────────────────────────────────────────────────────────┘
    │        ⟲ until spec met, round budget spent (default 3), or ASK
    └─ commit each milestone on green · report ──► /ship to push / open a PR
+                              * ux only for milestones that render UI
 ```
 
 The orchestrator is the main Claude thread — and the one that **writes the code**. The agents are isolated-context leaf workers that **find** problems and assess progress; the orchestrator **implements**, **fixes**, and coordinates. There's deliberately **no "software-engineer" agent**: production implementation wants the full context the main thread already holds — the plan, the spec, the live review findings — and stays coupled to the fix loop, whereas search, review, and test-authoring are the bounded jobs that actually benefit from a clean, isolated context. (Subagents also can't spawn subagents, so coordination lives in the main thread regardless.)
@@ -174,8 +177,11 @@ Now `/verify` syncs the working tree to the VM and runs build/lint/test there; t
 - **Warm sandbox, cold path removed** — the loop kicks off the VM dependency install during the *implement* phase, so it finishes in the background instead of sitting cold on the critical path at `/verify`. Ecosystem-agnostic (it uses whatever install the manifest implies) and best-effort — `/verify` still runs the authoritative install, so the gate is unchanged; it only reclaims latency.
 - **No required MCP / Node / jq** — the stack is pure config and drop-in anywhere.
 - **Commands vs skills** — these workflows are single-file `.claude/commands/*.md` for readability. They can be migrated to `.claude/skills/<name>/SKILL.md` if you want supporting files or `context: fork` execution; both produce the same `/name`.
+- **Vendored design skill** — `/prototype` closes its generative UI gap with Anthropic's [`frontend-design`](https://github.com/anthropics/skills) skill, vendored at `.claude/skills/frontend-design/` (pure markdown, so the stack stays dependency-free and drop-in — every user and headless run gets it without a plugin install). It fires only for **web UI** milestones; `ux-reviewer` critiques against the same principles, completing the maker/critic pairing for design.
 - **Future hardening** — if you ever want a *non-bypassable* gate (e.g. for unattended fleets), add a `Stop` hook that refuses to end a turn until `/review` has passed. Intentionally omitted here to keep enforcement agent-based.
 
 ## License
 
 Released under the [MIT License](LICENSE) — © 2026 Kacper Grabowski. Free to use, fork, and adapt.
+
+Exception: `.claude/skills/frontend-design/` is vendored from [anthropics/skills](https://github.com/anthropics/skills), © Anthropic, under the **Apache License 2.0** (see the `LICENSE.txt` in that folder; modifications are marked in its `SKILL.md`). If you copy the stack into your own repo, that notice travels with the folder.
