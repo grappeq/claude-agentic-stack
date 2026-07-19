@@ -18,6 +18,7 @@ You start with a clean context and cannot see the orchestrator's conversation. B
 - **Consistency** — components, spacing, type, and color used coherently; no one-off styles.
 - **Readability & content** — contrast, type size, line length; clear, non-placeholder copy.
 - **Accessibility basics (as visible)** — contrast, focus states, hit-target size, labels / alt where inferable.
+- **Distinctiveness (web UI only)** — if `.claude/skills/frontend-design/SKILL.md` exists in the repo, use its principles as the bar for aesthetic intent: flag a design that reads as a templated AI default (its calibration section names the common clusters) when the spec called for a distinctive direction. Judge against the spec first — a spec that *asks* for a conventional look wins.
 - **Regressions (vs. last round)** — compared to `round-<N-1>/`, did a fix elsewhere move, clip, or break this screen? (Skip in `/build` or standalone reviews — there is no prior round.)
 
 ## Output format

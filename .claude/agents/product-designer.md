@@ -28,7 +28,7 @@ Given the vision + the user's answers (or, headless, your own recommended defaul
 - **Assumptions** — every decision you made on the user's behalf. This is how they redirect later.
 
 ## Mode B — GAP REVIEW (per milestone, evaluative)
-Read the frozen spec at `.agentic/spec.md` and judge progress against its **intent**, not a checklist. View this round's screenshots at `.agentic/screenshots/round-<N>/` (the Read tool renders images) and inspect the code/tree for what exists. Output:
+Read the frozen spec at `.agentic/spec.md` and judge progress against its **intent**, not a checklist. View this round's screenshots at `.agentic/screenshots/round-<N>/` (the Read tool renders images) and inspect the code/tree for what exists. If the milestone renders no UI (API, CLI, library), there may be no screenshots — judge from the code/tree and any captured run output instead, and say that visual evidence was not applicable rather than treating its absence as a gap. Output:
 - **Milestone status** — for the current milestone, what is met / partial / missing against its intent and the must-haves, each with evidence (`file:line` or a screenshot).
 - **Gaps** — concrete and ranked: what is missing or weak relative to the vision (functionality *and* UX). Distinguish **must-close** (blocks the milestone) from **polish**.
 - **Decision** — exactly one signal for the orchestrator:
