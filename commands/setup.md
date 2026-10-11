@@ -34,7 +34,7 @@ A plugin carries commands, agents, skills, and hooks — not a permission policy
    # <repo> — Claude Code
 
    This repository runs on the **cas** plugin (Claude Agentic Stack). Start tasks with `/cas:build <task>` or
-   `/cas:prototype <vision>`; the operating manual (loop, Definition of Done, review gate) is injected at session
+   `/cas:prototype <vision>`; the operating manual (loop, Definition of Done, review gate) is loaded at session
    start by the plugin. Re-run `/cas:setup` to change the isolation profile.
 
    Project specifics for the stack:
