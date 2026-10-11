@@ -7,7 +7,7 @@
 # tells the user instead of silently working without the manual.
 manual="${CLAUDE_PLUGIN_ROOT:-}/MANUAL.md"
 if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ] || [ ! -r "$manual" ]; then
-  echo "cas plugin: the operating manual could not be found (looked for \`$manual\`). Tell the user the cas plugin install is broken and should be reinstalled; do not start cas work without the manual."
+  printf '%s\n' "cas plugin: the operating manual could not be found (looked for \`$manual\`). Tell the user the cas plugin install is broken and should be reinstalled; do not start cas work without the manual."
   exit 0
 fi
 cat <<EOF
