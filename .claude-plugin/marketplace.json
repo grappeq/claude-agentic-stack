@@ -1,0 +1,17 @@
+{
+  "name": "claude-agentic-stack",
+  "owner": { "name": "Kacper Grabowski", "url": "https://github.com/grappeq" },
+  "metadata": {
+    "description": "The Claude Agentic Stack, packaged as the cas plugin."
+  },
+  "plugins": [
+    {
+      "name": "cas",
+      "source": "./",
+      "description": "Claude as an autonomous, senior engineering team-of-one — plan, implement, verify (incl. runtime smoke), mandatory code + security (+ UX) review gate, resolve, commit. Run /cas:setup once per repo.",
+      "version": "0.1.1",
+      "category": "productivity",
+      "keywords": ["agentic", "workflow", "code-review", "security-review", "sandbox", "prototype"]
+    }
+  ]
+}

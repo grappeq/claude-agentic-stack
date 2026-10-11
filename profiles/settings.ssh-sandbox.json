@@ -3,6 +3,7 @@
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
+      "Read(~/.claude/plugins/cache/claude-agentic-stack/cas/*/MANUAL.md)",
       "Bash(ssh sandbox *)",
       "Bash(ssh sandbox)",
       "Bash(rsync *)",

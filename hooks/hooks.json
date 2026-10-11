@@ -1,0 +1,17 @@
+{
+  "description": "Points the session at the cas operating manual (MANUAL.md at the plugin root) at session start, resume, clear, and compaction — a plugin-root CLAUDE.md is not loaded on its own, and the manual is too large to inject (Claude Code keeps only the first ~2 KB of hook output), so the hook tells the model to Read it.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
