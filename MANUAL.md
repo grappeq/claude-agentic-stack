@@ -15,7 +15,7 @@ If `ssh sandbox true` fails, stop and report it — do **not** silently run buil
 
 ## The operating loop
 
-Run every non-trivial task through this loop. Its unit is one **deliverable** — a request that names several runs the loop once per deliverable (see *Scope & the queue*):
+Run every non-trivial task through this loop. Its unit is one **deliverable** — a request that names several deliverables runs the loop once for each (see *Scope & the queue*):
 
 1. **Understand** — Restate the goal and its acceptance criteria. Inspect the repo and **reuse what exists before writing anything new**. Delegate broad search to the `Explore` agent so your main context stays clean.
 2. **Plan** — For anything beyond a one-file change, dispatch the `cas:planner` agent (or reason it through): ordered steps, files to touch, test strategy, risks. Persist the outcome as a **durable target**: `/cas:build` writes the task, its acceptance criteria, status, the deliverable queue, and the current item's plan checklist to `.agentic/task.md` and keeps it live (skipped only for a trivial one-file change); `/cas:prototype` uses `.agentic/spec.md` + `design.md` + `progress.md`. This is what lets a run survive compaction and be re-entered by `/cas:resume`.
@@ -37,13 +37,14 @@ The engineering principles below are the precision defaults. Prototype posture r
 
 ## Scope & the queue
 
-A request may name several deliverables ("do R4, R5 and R6", "these three endpoints"). Accepting it accepts all of them:
+A request may name several deliverables ("do R4, R5 and R6", "these three endpoints"). Accepting it accepts all of them. These rules govern `/cas:build`; `/cas:prototype` orders its own work as milestones frozen in `.agentic/spec.md` and checkpointed in `.agentic/progress.md`, under its own *Iteration* rules:
 
-- **The loop runs once per deliverable** — each pays the full gate and earns its own commit. **Reporting and committing an item is a checkpoint, never a finish line**; running out of numbered steps is not permission to stop. Advancing includes a **reconcile**: an item's plan was drafted before its predecessors landed, so check it against what actually changed — and revise the item — before implementing it.
-- **Persist the queue.** `/cas:build` writes one `- [ ]` per *deliverable* in `.agentic/task.md` (the plan steps live under the item in flight) and is not `Status: done` until every box is checked. Each checked box records its commit SHA, so the stranded-run check and `/cas:resume` can confirm every item against `git log`. A summary paragraph does not survive compaction; the checklist does — and it is what `/cas:resume` re-enters mid-queue. (`/cas:prototype` keeps its own queue — the milestones in `.agentic/progress.md` — under the same fixed-at-acceptance and halt-don't-skip rules.)
-- **The queue is fixed at acceptance.** It holds what the request named — never what you discovered on the way. Report newly found work as a suggestion; do not append it and build it. Only the user changes the queue — adding, removing, reordering, or skipping an item — by their reply or `/cas:resume` steering; a skipped item is checked off as `skipped by user`.
-- **A blocked item halts the queue; it never skips ahead.** A circuit-breaker stop (*When stuck*) or an unresolved Critical/High is stop-and-report for the whole request: say which items landed, which is blocked and why, and which are untouched. Skipping it is the user's call (see above).
-- **Hard stops still fire mid-queue.** The *Autonomy policy* stops, the review gate, and the Definition of Done apply per item, undiminished. If a request names more deliverables than one run can hold to that bar, say so and agree the scope **before** starting — never by quietly abandoning it midway.
+- **Only what the request names is a deliverable.** Split a request into a queue only when it literally names several items; restate the queue before starting. Never carve one request into deliverables of your own.
+- **The loop runs once per deliverable** — each pays the full gate and earns its own commit. **Reporting and committing an item is a checkpoint, never a finish line**; running out of numbered steps is not permission to stop. Advancing includes a **reconcile**: each item is planned only when its turn comes, against the code its predecessors left behind — `cas:planner` is given what they committed.
+- **Persist the queue.** `/cas:build` writes one `- [ ]` per *deliverable* in `.agentic/task.md` (the plan steps live under the item in flight) and is not `Status: done` until every box is checked. Each committed box records its commit SHA, so the stranded-run check and `/cas:resume` can confirm every item against `git log`; a checked box counts only when its SHA is one of the run's own commits (or `/cas:ship` recorded the squash that replaced them) or the user marked it skipped or kept — see `/cas:build`'s done test. A summary paragraph does not survive compaction; the checklist does — and it is what `/cas:resume` re-enters mid-queue.
+- **The queue is fixed at acceptance.** It holds what the request named — never what you discovered on the way. Report newly found work as a suggestion; do not append it and build it. Only the user changes the queue — adding, removing, reordering, or skipping an item — by their reply or `/cas:resume` steering. Each change is recorded under `Steering:` in `task.md`, and a skipped item is checked off as `skipped by user`.
+- **A blocked item halts the queue; it never skips ahead.** A circuit-breaker stop (*When stuck*) or an unresolved Critical/High is stop-and-report for the whole request: record `Status: blocked` with the reason, and say which items landed, which is blocked and why, and which are untouched. Skipping it is the user's call (see above).
+- **Hard stops still fire mid-queue.** The *Autonomy policy* stops, the review gate, and the Definition of Done apply per item, undiminished. If a request names more deliverables than one run can hold to that bar, say so and agree the scope **before** starting — never by quietly abandoning it midway. *Headless: a hard failure — report the proposed split and stop; never start a partial queue.*
 
 ## Iteration
 
@@ -71,7 +72,7 @@ Working evidence — the task file, the spec, the design contract and its mockup
 
 ## Definition of Done
 
-Each **deliverable** is **not done** until ALL of these hold — and a multi-item request is finished only once every item has:
+Each **deliverable** is **not done** until ALL of these hold — and a multi-item request is finished only once every item has (or the user has skipped it):
 
 - [ ] Build succeeds and the full test suite passes (`/cas:verify` → PASS).
 - [ ] New or changed behavior has meaningful tests, including edge and abuse cases.
@@ -103,7 +104,7 @@ Act **without asking** for:
 **Stop and ask the user** when:
 - Requirements are ambiguous or self-contradictory, or "success" cannot be defined. *Exception — prototype posture front-loads a **brief kickoff interview**; once the spec in `.agentic/spec.md` and the M1 design contract in `.agentic/design.md` are frozen and confirmed, resolve product/UX ambiguity yourself (strongest reasonable option, recorded as an assumption) and ask nothing further. Stop only when the ambiguity changes the fundamental goal or needs scope beyond the stated vision.*
 - The **design pick** in `/cas:mockup`: presenting 2–3 mockup variants of a new surface and waiting for the user's choice is a sanctioned ask — once per new surface in `/cas:build`, once at `/cas:prototype` kickoff (later surfaces default automatically). *Headless: take the recommended default and record it as an assumption.*
-- A request names more deliverables than one run can hold to the gate — agree the scope **before** starting (see *Scope & the queue*).
+- A request names more deliverables than one run can hold to the gate — agree the scope **before** starting (see *Scope & the queue*). *Headless: a hard failure — report the proposed split and stop.*
 - Existing `.agentic/` state records an unfinished run that a new `/cas:build` or `/cas:prototype` would overwrite — surface it and offer `/cas:resume` or an explicit discard. *In a headless run this is a hard failure: report and stop; never auto-discard.*
 - An action is externally visible or irreversible **outside** the sandbox — **pushing to a remote, force-pushing, opening a pull request**, publishing a release, deleting cloud resources, or sending external messages/emails. (The human-invoked `/cas:ship` is the sanctioned path for push/PR — invoking it is the ask; force-push stays denied even there.)
 - You would need a real secret/credential you do not have.
