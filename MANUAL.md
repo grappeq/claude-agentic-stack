@@ -8,7 +8,8 @@ Claude Code runs on a **permission-limited host**; a separate **sandbox VM** (SS
 
 - **On the host:** read and edit files in the workspace, run `git`, and sync code to the VM. Nothing destructive; host secrets (`~/.ssh`, `~/.aws`, `.env`, …) are off-limits.
 - **On the sandbox VM (`ssh sandbox …`):** all builds, tests, installs, servers, and any risky, long-running, or networked command. You have free rein here — it's disposable. (The alias and `SANDBOX_REMOTE_DIR` come from the profile `/cas:setup` installed into `.claude/settings.json`; a non-default alias is recorded in the repo's `CLAUDE.md`.)
-- **Sync before you run.** The host is the source of truth for code; push the working tree to the VM before executing: `rsync -az --delete --exclude '.git/' ./ sandbox:"$SANDBOX_REMOTE_DIR"/` (fall back to `scp -r` if `rsync` is missing). `/cas:verify` does this for you.
+- **Sync before you run.** The host is the source of truth for code; push the working tree to the VM before executing: `rsync -az --delete --exclude '.git/' ./ sandbox:<remote-dir>/` (fall back to `scp -r` if `rsync` is missing). `/cas:verify` does this for you.
+- **Use the literal remote dir.** Resolve it once per session: `printenv SANDBOX_REMOTE_DIR` (if that is denied, read `env.SANDBOX_REMOTE_DIR` from `.claude/settings.json`). Use the value only if it matches `/cas:setup`'s dir rule (`^(~(/\.?[A-Za-z0-9_-][A-Za-z0-9_.-]*)+|(/\.?[A-Za-z0-9_-][A-Za-z0-9_.-]*){2,})$`); otherwise stop and report. Then write that literal — e.g. `~/agentic-workspace`, whose `~` the VM expands — wherever a command says `<remote-dir>`. Never put `$SANDBOX_REMOTE_DIR` in an `rsync`, `ssh`, or `scp` command: a headless run's permission check refuses a command with an unexpanded variable, so it would stall.
 - **Warm the sandbox early (optional speedup).** The first dependency install is slow and otherwise lands on the critical path at verify time. As soon as the dependency manifest is known, kick off a one-time **background** sync (using `/cas:verify`'s excludes) + dependency install on the VM so it runs *while you implement*; by verify time the dependency cache is warm and `/cas:verify`'s install is a fast no-op. Use the project's own install for its ecosystem — detected from the manifest exactly as `/cas:verify` does — because the dependency caches (`node_modules/`, `.venv/`, and the language's own package cache) survive the excluded-`--delete` syncs. Best-effort only: `/cas:verify` still runs the authoritative install, so a failed or skipped warm-up costs only the missed speedup, never correctness. Skip it when the VM is already warm.
 
 If `ssh sandbox true` fails, stop and report it — do **not** silently run builds/tests on the limited host.
@@ -97,6 +98,8 @@ Act **without asking** for:
 - You would need a real secret/credential you do not have.
 
 Everything else: proceed.
+
+**Headless runs.** A run is headless when no one can answer: the `AskUserQuestion` tool is not in your tool list (ToolSearch for it once) or its call is denied — as in `claude -p` and CI. Decide this before the first question of the run, not after it. Headless, **never print a question as prose and wait**: the run ends the moment you stop. Take the documented headless default instead (the recommended design pick, recorded as an assumption), or, where a step says so, report and stop.
 
 ## Committing & publishing
 

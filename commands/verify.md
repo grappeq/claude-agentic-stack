@@ -5,19 +5,19 @@ argument-hint: [optional round number N for screenshot bucketing]
 
 The host is permission-limited, so **builds and tests run on the sandbox VM** (SSH alias `sandbox`), never on the host.
 
-1. **Reachability.** Confirm the VM is up: `ssh sandbox true`. If it fails, STOP and report — do not fall back to building on the host.
+1. **Reachability.** Confirm the VM is up: `ssh sandbox true`. If it fails, STOP and report — do not fall back to building on the host. Then resolve the **remote dir** to a literal, as MANUAL.md → *Where things run* describes (`printenv SANDBOX_REMOTE_DIR`, checked against `/cas:setup`'s dir rule); `<remote-dir>` below stands for it.
 
 2. **Sync** the working tree to the VM:
    ```
-   rsync -az --delete --exclude '.git/' --exclude 'node_modules/' --exclude 'target/' --exclude '.venv/' ./ sandbox:"$SANDBOX_REMOTE_DIR"/
+   rsync -az --delete --exclude '.git/' --exclude 'node_modules/' --exclude 'target/' --exclude '.venv/' ./ sandbox:<remote-dir>/
    ```
-   If `rsync` isn't on the host, fall back to `scp -r` or `git archive HEAD | ssh sandbox "mkdir -p $SANDBOX_REMOTE_DIR && tar -x -C $SANDBOX_REMOTE_DIR"`.
+   If `rsync` isn't on the host, fall back to `scp -r` or `git archive HEAD | ssh sandbox "mkdir -p <remote-dir> && tar -x -C <remote-dir>"`.
 
 3. **Detect & run on the VM.** Detect the project type from its manifests and run the build, lint/type-check, and tests **over SSH**:
    ```
-   ssh sandbox "cd $SANDBOX_REMOTE_DIR && <commands>"
+   ssh sandbox "cd <remote-dir> && <commands>"
    ```
-   (Use **double** quotes so the host expands `$SANDBOX_REMOTE_DIR` while the literal `~` is expanded by the VM; the inner command still runs as one `ssh` call.)
+   (`<remote-dir>` is the literal remote dir from step 1 — e.g. `~/agentic-workspace`, whose `~` the VM expands. Never write `$SANDBOX_REMOTE_DIR` into the command: a headless run's permission check refuses a command with an unexpanded variable. The inner command still runs as one `ssh` call.)
    Prefer the project's own scripts (package.json `scripts`, a Makefile, `pyproject.toml` config) over the generic defaults below. Run what exists; skip what doesn't.
 
    | Manifest present | Commands to run on the VM |
