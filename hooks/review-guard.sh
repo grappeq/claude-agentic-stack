@@ -67,8 +67,11 @@ esac
 # --- commit ---
 cmd=$(field command)
 # `git [-C dir | -c k=v | --opt[=v] | -x]... commit`, anywhere in the command line.
-# shellcheck disable=SC2016  # the backticks in the pattern are literal
-printf '%s' "$cmd" | grep -qE '(^|[;&|(`[:space:]])git(([[:space:]]+(-C|-c)[[:space:]]+[^[:space:]]+)|([[:space:]]+--[a-z-]+(=[^[:space:]]+)?)|([[:space:]]+-[a-zA-Z]))*[[:space:]]+commit([[:space:];&|)`]|$)' || exit 0
+opts='(([[:space:]]+(-C|-c)[[:space:]]+[^[:space:]]+)|([[:space:]]+--[a-z-]+(=[^[:space:]]+)?)|([[:space:]]+-[a-zA-Z]))*'
+# shellcheck disable=SC2016  # the backticks in these patterns are literal
+lead='(^|[;&|(`[:space:]])git'
+# shellcheck disable=SC2016
+printf '%s' "$cmd" | grep -qE "${lead}${opts}"'[[:space:]]+commit([[:space:];&|)`]|$)' || exit 0
 
 head=$(git rev-parse --verify -q HEAD) || head=none
 # Enforced during a cas run: a review was recorded on this HEAD, or .agentic/task.md is open (Status not done).
@@ -79,10 +82,37 @@ done
 if [ -f .agentic/task.md ] && ! grep -qiE '^Status:[[:space:]]*done' .agentic/task.md; then active=1; fi
 [ -n "$active" ] || exit 0
 
+# This hook runs before the command, so whatever precedes `git commit` in the same command goes unchecked: allow only
+# `cd`, `git add` and read-only git there. (What follows the commit, such as its message or `| tail`, can't change it.)
+# shellcheck disable=SC2016
+before=$(printf '%s' "$cmd" | sed -E "s/${lead}${opts}"'[[:space:]]+commit([[:space:];&|)`].*)?$/\1/')
+# shellcheck disable=SC2016
+pre=$(printf '%s\n' "$before" | awk '{ gsub(/\\n/, "\n"); gsub(/&&|\|\||[;|]/, "\n"); gsub(/2>&1|2?>[ \t]*\/dev\/null/, ""); print }' |
+  sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | while IFS= read -r seg; do
+    [ -n "$seg" ] || continue
+    if printf '%s' "$seg" | grep -qE '^cd[[:space:]]+[^[:space:]$`]+$'; then :
+    elif printf '%s' "$seg" | grep -qE "^git${opts}"'[[:space:]]+add([[:space:]][^$`>]*)?$'; then echo ADD
+    elif printf '%s' "$seg" | grep -qE "^git${opts}"'[[:space:]]+(status|diff|log|show|rev-parse)([[:space:]][^$`>]*)?$'; then :
+    else printf 'BAD %s\n' "$seg"; fi
+  done)
+bad=$(printf '%s\n' "$pre" | sed -n 's/^BAD //p' | head -n 1)
+if [ -n "$bad" ]; then
+  cat >&2 <<EOF
+cas review guard: run \`git commit\` as its own Bash command, after any edits. The guard checks the tree before a
+command runs, so \`$bad\` ahead of the commit in the same command would go unchecked. (\`cd\`, \`git add\` and
+read-only git commands may precede it.)
+EOF
+  exit 2
+fi
+
 now=$(snapshot)
 base=$head; [ "$head" = none ] && base=$(git hash-object -t tree /dev/null)
 # What a commit can carry: every path whose index or working-tree content differs from HEAD.
 paths=$($G diff --name-only "$base" -- | grep -v '^\.agentic/')
+# A `git add` ahead of the commit can stage untracked files too, so those must match the review as well.
+if printf '%s\n' "$pre" | grep -qx ADD; then
+  paths=$(printf '%s\n%s\n' "$paths" "$($G ls-files --others --exclude-standard | grep -v '^\.agentic/')")
+fi
 required="code-reviewer security-reviewer"
 [ -f "$state/ux-reviewer" ] && sed -n 2p "$state/ux-reviewer" | grep -qx "HEAD $head" && required="$required ux-reviewer"
 

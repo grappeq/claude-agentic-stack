@@ -74,6 +74,14 @@ expect allow "ux passed too" 'git commit -m x'
 finish cas:code-reviewer NONE
 expect block "a reply with no GATE line" 'git commit -m x'
 review code-reviewer PASS
+expect block "an edit chained before the commit (runs after the check)" 'echo z >> a.txt && git commit -am x'
+# shellcheck disable=SC2016  # the $( is part of the command under test
+expect allow "cd, git add and a heredoc message are fine" 'cd . && git add a.txt && git commit -m \"$(cat <<EOF\\nfeat: c; with | stuff\\nEOF\\n)\"'
+expect allow "output piped after the commit is fine" 'git commit -am x 2>&1 | tail -20'
+printf 'new\n' > c.txt
+expect allow "unreviewed untracked file, plain commit" 'git commit -m x'
+expect block "unreviewed untracked file, git add -A first" 'git add -A && git commit -m x'
+rm c.txt
 gate 'git commit -m x' && git commit -qm "feat: c"
 printf 'Task: x\nStatus: done\n' > .agentic/task.md
 printf 'a\nb\nc\nd\n' > a.txt
