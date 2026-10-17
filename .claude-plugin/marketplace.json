@@ -9,7 +9,7 @@
       "name": "cas",
       "source": "./",
       "description": "Claude as an autonomous, senior engineering team-of-one — plan, implement, verify (incl. runtime smoke), mandatory code + security (+ UX) review gate, resolve, commit. Run /cas:setup once per repo.",
-      "version": "0.2.0",
+      "version": "0.1.2",
       "category": "productivity",
       "keywords": ["agentic", "workflow", "code-review", "security-review", "sandbox", "prototype"]
     }
