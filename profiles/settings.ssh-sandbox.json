@@ -8,7 +8,8 @@
       "Bash(ssh sandbox)",
       "Bash(rsync *)",
       "Bash(scp *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(printenv SANDBOX_REMOTE_DIR)"
     ],
     "deny": [
       "Read(.env)",

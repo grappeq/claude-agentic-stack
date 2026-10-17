@@ -1,5 +1,5 @@
 {
-  "description": "Points the session at the cas operating manual (MANUAL.md at the plugin root) at session start, resume, clear, and compaction — a plugin-root CLAUDE.md is not loaded on its own, and the manual is too large to inject (Claude Code keeps only the first ~2 KB of hook output), so the hook tells the model to Read it.",
+  "description": "SessionStart points the session at the cas operating manual (MANUAL.md at the plugin root) at session start, resume, clear, and compaction — a plugin-root CLAUDE.md is not loaded on its own, and the manual is too large to inject (Claude Code keeps only the first ~2 KB of hook output), so the hook tells the model to Read it. The review guard (review-guard.sh) snapshots the tree when a cas reviewer is dispatched, records its GATE verdict when it stops, and blocks a `git commit` during a cas run that would include content no passing code + security review has seen.",
   "hooks": {
     "SessionStart": [
       {
@@ -9,6 +9,40 @@
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/review-guard.sh\" start",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/review-guard.sh\" commit",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^(cas:)?(code|security|ux)-reviewer$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/review-guard.sh\" stop",
+            "timeout": 30
           }
         ]
       }
