@@ -1,8 +1,9 @@
 #!/bin/sh
 # SessionStart hook: point the session at the cas operating manual.
-# Claude Code only puts the first ~2 KB of a hook's output into context, and
-# MANUAL.md is far larger, so the hook prints a short directive to Read it
-# instead of the manual itself. Keep this output well under 2 KB.
+# Claude Code caps a hook's output at 10,000 characters (past that, only a
+# 2,000-character preview reaches context), and MANUAL.md is far larger, so the
+# hook prints a short directive to Read it instead of the manual itself. Keep
+# this output well under that cap.
 # A broken install still prints a notice to stdout (exit 0), so the model
 # tells the user instead of silently working without the manual.
 manual="${CLAUDE_PLUGIN_ROOT:-}/MANUAL.md"
