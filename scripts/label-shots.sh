@@ -51,7 +51,8 @@ while read -r stem label || [ -n "$stem" ]; do
 </body></html>
 EOF
     npx playwright screenshot --viewport-size="$w,600" --full-page \
-      "file://$(cd "$dir/labelled" && pwd)/$shot.html" "$dir/labelled/$shot.png" >/dev/null
+      "file://$(cd "$dir/labelled" && pwd)/$shot.html" "$dir/labelled/$shot.png" >/dev/null ||
+      { echo "label-shots: screenshot failed: $shot" >&2; fail=1; continue; }
     echo "labelled/$shot.png"
   done
   [ "$found" = 1 ] || { echo "label-shots: no screenshot for $stem" >&2; fail=1; }

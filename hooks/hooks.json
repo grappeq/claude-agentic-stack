@@ -1,5 +1,5 @@
 {
-  "description": "Points the session at the cas operating manual (MANUAL.md at the plugin root) at session start, resume, clear, and compaction — a plugin-root CLAUDE.md is not loaded on its own, and the manual is too large to inject (Claude Code keeps only the first ~2 KB of hook output), so the hook tells the model to Read it.",
+  "description": "Points the session at the cas operating manual (MANUAL.md at the plugin root) at session start, resume, clear, and compaction — a plugin-root CLAUDE.md is not loaded on its own, and the manual is too large to inject (Claude Code caps hook output at 10,000 characters and shows only a 2,000-character preview beyond that), so the hook tells the model to Read it.",
   "hooks": {
     "SessionStart": [
       {
