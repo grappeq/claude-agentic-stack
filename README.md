@@ -43,6 +43,10 @@ The repo root *is* the plugin (and its own marketplace):
 │   └── ux-reviewer.md             # critiques the rendered UI vs spec + design contract  (read-only)
 ├── skills/
 │   └── frontend-design/           # vendored Anthropic skill (Apache-2.0) → cas:frontend-design
+├── scripts/
+│   └── label-shots.sh             # runs on the VM: renders labelled/ screenshot copies with a title strip
+├── templates/
+│   └── storyboard.html            # the /cas:mockup storyboard page, filled per draft
 └── profiles/                      # permission profiles — a plugin can't ship settings, so /cas:setup installs one
     ├── settings.ssh-sandbox.json  # DEFAULT: limited host, free VM reached over SSH
     ├── settings.bash-sandbox.json # mac/Linux/WSL2, no separate VM: built-in OS Bash sandbox

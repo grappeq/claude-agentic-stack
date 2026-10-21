@@ -40,7 +40,7 @@ This is the medium-agnostic checkpoint that `/cas:build` and `/cas:prototype` ca
    (`<remote-dir>` is the literal remote dir — MANUAL.md → *Where things run* — never `$SANDBOX_REMOTE_DIR`, which a headless run's permission check refuses; the escaped `\$PWD` / `\$f` expand on the VM. `-rtz` (no `-l`, so symlinks are skipped — portable to macOS's openrsync, which lacks `--no-links`) plus the PNG-only filter means nothing the VM planted — a symlink, a stray file — lands on the host.) `label-shots.sh` (shipped with the plugin) reads `labels.tsv` and renders `labelled/<name>.png` (and `labelled/<name>.mobile.png`): the screenshot with its label as a title strip above it, so a PNG seen on its own says which option, screen, and draft it is. The raw `<name>.png` stays the untouched design evidence that reviewers compare against. If it reports a bad line or PNG, fix that and re-run the command. If the script path above still starts with the literal `${CLAUDE_PLUGIN_ROOT}` (not substituted), or that `rsync` of the script fails, drop it and the `&& sh …label-shots.sh` part, and say the screenshots are unlabelled — never stall on it. **Graceful degradation:** no Playwright on the VM → no PNGs and no storyboard; step 5 shows the HTML paths plus each variant's ASCII wireframe and stance, and says visual evidence was unavailable (`npx playwright install --with-deps chromium` on the VM enables it). **Optional canvas:** when the built-in `design` skill is available (a research preview that needs a claude.ai login — not API-key, Bedrock, or Vertex sessions), the run is interactive, and the **user asked** for a canvas preview (offer it; never send content there unasked), you may additionally render the artboards on its canvas and include the link in the question so the user can tweak by hand — but the HTML + PNG under `.agentic/design/` stay the frozen evidence (reviewers have only Read / Grep / Glob and cannot open a canvas), and the canvas sends mockup content to claude.ai, so never use it for a surface that shows sensitive data. If the user tweaked an artboard on the canvas, fold their changes back into the chosen option's HTML as a new draft round, re-apply the static-artboard rule (strip anything it forbids, re-placeholder any real-looking data), and re-run the step-3 checks before rendering or freezing.
 
 5. **Show, then pick.** In an interactive run — `ask` or `auto` — put the draft in front of the user before the pick, so the mockups are in the session and not only on disk (in `auto` they see what was defaulted). Reading a PNG yourself shows it only to you, and an `AskUserQuestion` preview shows only the option in focus. Headless: skip the showing; the step-7 report lists the paths.
-   - **Web** (when step 4 produced PNGs): write `storyboard.html` in the draft directory from the skeleton below — one column per option, one row per screen (and a row per screen's mobile shots, if any), each frame titled with its label (a mobile frame: the label followed by ` · mobile`, exactly as its labelled copy reads), and the raw `<name>.png` (and `<name>.mobile.png`) referenced by relative path, never a `labelled/` copy: the frame caption is its title, and the published images stay the evidence — and run the step-3 forbidden-pattern grep on it. The skeleton already meets the Artifact page contract (title, theme tokens, phone layout): use it as is, without a redesign. One storyboard per surface. Then show it by the first route available — if its tool is refused or returns an error, use the next route:
+   - **Web** (when step 4 produced PNGs): write `storyboard.html` in the draft directory from the template — Read `${CLAUDE_PLUGIN_ROOT}/templates/storyboard.html` and fill it as below — one column per option, one row per screen (and a row per screen's mobile shots, if any), each frame titled with its label (a mobile frame: the label followed by ` · mobile`, exactly as its labelled copy reads), and the raw `<name>.png` (and `<name>.mobile.png`) referenced by relative path, never a `labelled/` copy: the frame caption is its title, and the published images stay the evidence — and run the step-3 forbidden-pattern grep on it. The template already meets the Artifact page contract (title, theme tokens, phone layout): use it as is, without a redesign. If that Read fails, or its path still starts with the literal `${CLAUDE_PLUGIN_ROOT}`, write no storyboard: show the `labelled/*.png` by route 2 or 3 and say the storyboard was unavailable. One storyboard per surface. Then show it by the first route available — if its tool is refused or returns an error, use the next route:
      1. **The `Artifact` tool** (claude.ai artifacts): publish `storyboard.html` with every PNG it references in `files`, each under the same relative name. It is private to the user. Keep the `url` the first publish returns and pass it as `url` when publishing a later draft of the same surface (its file path differs), so the link the user has always shows the latest draft. Put the link in your message.
      2. **`SendUserFile`** (it may be listed as deferred: load it with ToolSearch first): send every `labelled/*.png` of this draft in one call, `display: "render"`.
      3. **Neither:** give the absolute path of `storyboard.html` (it opens in any browser on this machine) and of each `labelled/*.png`.
@@ -52,41 +52,7 @@ This is the medium-agnostic checkpoint that `/cas:build` and `/cas:prototype` ca
 
    Showing is not asking: never wait for a reply to it. `design=auto` (or headless): take the recommended default and go to step 6. Otherwise ask **one** `AskUserQuestion` (one question per surface when the call covers several): the recommended default **first**, each option labelled `Option <X> · <stance>` (the same letters as the storyboard) with its rationale as the description, with the artifact inline as the preview for text media and the storyboard link or path (plus the canvas link, if any) in the question text for web; the last option is *Re-draft with feedback*. On re-draft, collect the feedback, re-dispatch DESIGN: PROPOSE with it (keep what the user liked; change only what the feedback names), bump `k`, and repeat from step 2, showing the new draft before asking again — **at most 2 re-draft rounds**, then ask the user to pick from what exists. These rounds are separate from `/cas:prototype`'s improvement-round budget.
 
-   Storyboard skeleton: fill the angle-bracket parts and HTML-escape every text you insert (`&`, `<`, `>`, `"`). Repeat the `opt` section per option, putting the `rec` badge only on the recommended one, and repeat the `h3` + `grid` block per screen, with one `frame` per option.
-   ```
-   <!doctype html>
-   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-   <title><Surface> mockups</title>
-   <style>
-   :root{--bg:#f4f4f1;--fg:#18181b;--muted:#55555c;--card:#fff;--line:#d9d9d4;--rec:#17663a}
-   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;color-scheme:dark}}
-   :root[data-theme="dark"]{--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;color-scheme:dark}
-   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-   main{max-width:1600px;margin:0 auto;padding:24px 16px 48px}
-   h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 4px}h3{font-size:17px;margin:0 0 8px}p{margin:0 0 12px;color:var(--muted)}
-   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));align-items:start;gap:16px;margin:0 0 28px}
-   .opt,.frame{margin:0;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-   .opt{padding:12px 14px}.opt p{margin:0}
-   .rec{margin-left:8px;padding:0 6px;border:1px solid var(--rec);border-radius:4px;color:var(--rec);font-size:12px}
-   .frame figcaption{padding:8px 12px;background:#111;color:#fff;font-weight:600;font-size:14px}
-   .frame img{display:block;width:100%;height:auto}
-   </style>
-   <main>
-   <h1><Surface> — draft <k></h1>
-   <p><how to pick: "Pick in the chat question; its letters match these options." — or, in auto, "Option <X> was taken as the default; reply in the chat to change it."> Tap a screenshot for full size.</p>
-   <div class="grid">
-   <section class="opt"><h2>Option A · <stance><span class="rec">Recommended</span></h2><p><rationale></p></section>
-   </div>
-   <h3><Screen name></h3>
-   <div class="grid">
-   <figure class="frame"><figcaption><label></figcaption><a target="_blank" rel="noopener" href="<name>.png"><img src="<name>.png" alt="<label>"></a></figure>
-   </div>
-   <h3><Screen name> · mobile</h3>
-   <div class="grid">
-   <figure class="frame"><figcaption><label> · mobile</figcaption><a target="_blank" rel="noopener" href="<name>.mobile.png"><img src="<name>.mobile.png" alt="<label> · mobile"></a></figure>
-   </div>
-   </main>
-   ```
+   Filling the template: fill the angle-bracket parts and HTML-escape every text you insert (`&`, `<`, `>`, `"`). Repeat the `opt` section per option, putting the `rec` badge only on the recommended one, and repeat the `h3` + `grid` block per screen, with one `frame` per option.
 
 6. **Freeze.** Write `.agentic/design.md` — or, if it already holds other surfaces, add or replace **only this surface's section**:
    ```
