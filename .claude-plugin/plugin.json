@@ -1,6 +1,6 @@
 {
   "name": "cas",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Claude Agentic Stack — Claude as an autonomous, senior engineering team-of-one: plan, implement, verify with a runtime smoke, clear a mandatory code + security (+ UX) review gate, resolve, commit. /cas:build, /cas:prototype, /cas:mockup, /cas:resume, /cas:verify, /cas:review, /cas:sync, /cas:ship, /cas:setup; seven read-only or bounded agents; the plugin's cas:frontend-design skill for web UI.",
   "author": { "name": "Kacper Grabowski" },
   "homepage": "https://github.com/grappeq/claude-agentic-stack",
