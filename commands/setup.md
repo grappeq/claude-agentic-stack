@@ -38,7 +38,7 @@ A plugin carries commands, agents, skills, and hooks — not a permission policy
    start by the plugin. Re-run `/cas:setup` to change the isolation profile.
 
    Project specifics for the stack:
-   - Sandbox: SSH alias `<alias>`, remote dir `<dir>`      (ssh profile only; omit the line when both are the defaults)
+   - Sandbox: SSH alias `<alias>`, remote dir `<dir>`      (ssh profile only; write it even when both are the defaults)
    - Build / test / boot commands: <fill in, or leave to /cas:verify's detection>
    ```
 
