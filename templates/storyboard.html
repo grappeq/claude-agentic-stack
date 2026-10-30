@@ -2,31 +2,53 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><Surface> mockups</title>
 <style>
-:root{--bg:#f4f4f1;--fg:#18181b;--muted:#55555c;--card:#fff;--line:#d9d9d4;--rec:#17663a}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;color-scheme:dark}
+:root{--bg:#f4f4f1;--fg:#18181b;--muted:#55555c;--card:#fff;--line:#d9d9d4;--rec:#17663a;--sel:#18181b;--selfg:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;--sel:#ececee;--selfg:#141416;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141416;--fg:#ececee;--muted:#a1a1aa;--card:#1d1d20;--line:#34343a;--rec:#6fd39a;--sel:#ececee;--selfg:#141416;color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1600px;margin:0 auto;padding:24px 16px 48px}
-h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 4px}h3{font-size:17px;margin:0 0 8px}p{margin:0 0 12px;color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));align-items:start;gap:16px;margin:0 0 28px}
+main{max-width:1282px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 4px}h3{font-size:17px;margin:28px 0 8px}p{margin:0 0 12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));align-items:start;gap:16px}
 .opt,.frame{margin:0;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .opt{padding:12px 14px}.opt p{margin:0}
 .rec{margin-left:8px;padding:0 6px;border:1px solid var(--rec);border-radius:4px;color:var(--rec);font-size:12px}
 .frame figcaption{padding:8px 12px;background:#111;color:#fff;font-weight:600;font-size:14px}
 .frame img{display:block;width:100%;height:auto}
+.mobile .frame{max-width:420px}
+/* A desktop screen shows one option at a time, at up to its real width; the radio buttons (and arrow keys) switch it. */
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.bar label{position:relative;padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;font-weight:600;font-size:14px}
+.bar input{position:absolute;opacity:0;pointer-events:none}
+.bar label:has(input:checked){background:var(--sel);color:var(--selfg);border-color:var(--sel)}
+.bar label:has(input:focus-visible){outline:2px solid var(--rec);outline-offset:2px}
+.bar .zoom{margin-left:auto;font-weight:400}
+.screen .frame{margin:0 0 12px}
+.screen .scroll{overflow:auto}
+.screen:has(.tabs input:checked) .frame{display:none}
+.screen:has(.tabs label:nth-of-type(1) input:checked) .frame:nth-of-type(1),
+.screen:has(.tabs label:nth-of-type(2) input:checked) .frame:nth-of-type(2),
+.screen:has(.tabs label:nth-of-type(3) input:checked) .frame:nth-of-type(3){display:block}
+.screen:has(.zoom input:checked) .frame img{width:auto;max-width:none}
 </style>
 <main>
 <h1><Surface> — draft <k></h1>
-<p><how to pick: "Pick in the chat question; its letters match these options." — or, in auto, "Option <X> was taken as the default; reply in the chat to change it."> Tap a screenshot for full size.</p>
+<p><how to pick: "Pick in the chat question; its letters match these options." — or, in auto, "Option <X> was taken as the default; reply in the chat to change it."> Under each screen, switch options with the buttons or the arrow keys to compare them in place; "Actual size" shows the screenshot pixel for pixel.</p>
 <div class="grid">
 <section class="opt"><h2>Option A · <stance><span class="rec">Recommended</span></h2><p><rationale></p></section>
 </div>
+<section class="screen">
 <h3><Screen name></h3>
-<div class="grid">
-<figure class="frame"><figcaption><label></figcaption><a target="_blank" rel="noopener" href="<name>.png"><img src="<name>.png" alt="<label>"></a></figure>
+<div class="bar">
+<div class="tabs">
+<label><input type="radio" name="s<n>" checked>A · <stance></label>
 </div>
+<label class="zoom"><input type="checkbox">Actual size</label>
+</div>
+<figure class="frame"><figcaption><shot label></figcaption><div class="scroll"><img src="<name>.png" alt="<shot label>"></div></figure>
+</section>
 <h3><Screen name> · mobile</h3>
-<div class="grid">
-<figure class="frame"><figcaption><label> · mobile</figcaption><a target="_blank" rel="noopener" href="<name>.mobile.png"><img src="<name>.mobile.png" alt="<label> · mobile"></a></figure>
+<div class="grid mobile">
+<figure class="frame"><figcaption><shot label> · mobile</figcaption><img src="<name>.mobile.png" alt="<shot label> · mobile"></figure>
 </div>
 </main>
